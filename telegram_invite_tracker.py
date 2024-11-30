@@ -50,13 +50,18 @@ class InviteTrackerBot:
                 # Get invite stats
                 invite_count = self.invite_counts[inviter.id]
                 balance = invite_count * 50
-                remaining = max(6 - invite_count, 0)
+                next_milestone = invite_count + (4 - (invite_count % 4))
+                remaining = max(next_milestone - invite_count, 0)
 
-                # Milestone messages
-                if invite_count in [2, 4]:
-                    keyboard = InlineKeyboardMarkup([
-                        [InlineKeyboardButton("Check", callback_data=f"check_{inviter.id}")]
-                    ])
+                # Milestone logic
+                if invite_count % 4 == 0 or invite_count == 6:
+                    keyboard = [
+                        [InlineKeyboardButton("Check", callback_data=f"check_{inviter.id}")],
+                    ]
+                    if invite_count >= 6:
+                        keyboard.append(
+                            [InlineKeyboardButton("Request Withdrawal", url="https://your-withdrawal-link.com")]
+                        )
                     await update.message.reply_text(
                         f"🎉 **Milestone Achieved!** 🎉\n\n"
                         f"📋 **Dashboard:**\n"
@@ -67,24 +72,7 @@ class InviteTrackerBot:
                         f"🚀 **Next Goal:** Invite {remaining} more\n"
                         f"-----------------------\n\n"
                         f"Keep inviting to earn more rewards!",
-                        reply_markup=keyboard
-                    )
-
-                elif invite_count == 6:
-                    keyboard = InlineKeyboardMarkup([
-                        [InlineKeyboardButton("Check", callback_data=f"check_{inviter.id}")],
-                        [InlineKeyboardButton("Request Withdrawal", url="https://your-withdrawal-link.com")]
-                    ])
-                    await update.message.reply_text(
-                        f"🎉 **Congratulations, {inviter.first_name}!** 🎉\n\n"
-                        f"🎯 **Milestone Reached:**\n"
-                        f"-----------------------\n"
-                        f"👥 **Total Invites:** {invite_count}\n"
-                        f"💰 **Total Balance:** {balance} ETB\n"
-                        f"🎖️ **Reward Unlocked:** Withdrawal Available\n"
-                        f"-----------------------\n\n"
-                        f"Click below to request your withdrawal!",
-                        reply_markup=keyboard
+                        reply_markup=InlineKeyboardMarkup(keyboard)
                     )
 
             except Exception as e:
@@ -95,18 +83,53 @@ class InviteTrackerBot:
         query = update.callback_query
         user_id = int(query.data.split('_')[1])
         invite_count = self.invite_counts.get(user_id, 0)
-        remaining = max(6 - invite_count, 0)
+        next_milestone = invite_count + (4 - (invite_count % 4))
+        remaining = max(next_milestone - invite_count, 0)
 
+        keyboard = [[InlineKeyboardButton("Back", callback_data=f"back_{user_id}")]]
         await query.answer()
         await query.edit_message_text(
             text=(
                 f"📊 **Your Progress:**\n"
                 f"-----------------------\n"
                 f"👥 **Invites:** {invite_count}\n"
-                f"🚀 **Remaining:** {remaining} more\n"
+                f"🚀 **Remaining to Next Goal:** {remaining}\n"
                 f"-----------------------\n\n"
                 f"Keep inviting to earn more rewards!"
+            ),
+            reply_markup=InlineKeyboardMarkup(keyboard)
+        )
+
+    async def handle_back(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        """Handle the 'Back' button callback"""
+        query = update.callback_query
+        user_id = int(query.data.split('_')[1])
+        invite_count = self.invite_counts.get(user_id, 0)
+        balance = invite_count * 50
+        next_milestone = invite_count + (4 - (invite_count % 4))
+        remaining = max(next_milestone - invite_count, 0)
+
+        keyboard = [
+            [InlineKeyboardButton("Check", callback_data=f"check_{user_id}")],
+        ]
+        if invite_count >= 6:
+            keyboard.append(
+                [InlineKeyboardButton("Request Withdrawal", url="https://your-withdrawal-link.com")]
             )
+
+        await query.answer()
+        await query.edit_message_text(
+            text=(
+                f"🎉 **Milestone Achieved!** 🎉\n\n"
+                f"📋 **Dashboard:**\n"
+                f"-----------------------\n"
+                f"👥 **Invites:** {invite_count}\n"
+                f"💰 **Balance:** {balance} ETB\n"
+                f"🚀 **Next Goal:** Invite {remaining} more\n"
+                f"-----------------------\n\n"
+                f"Keep inviting to earn more rewards!"
+            ),
+            reply_markup=InlineKeyboardMarkup(keyboard)
         )
 
     async def show_invite_count(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -120,7 +143,6 @@ class InviteTrackerBot:
     def run(self):
         """Run the bot"""
         try:
-            # Create the Application and pass it your bot's token
             application = Application.builder().token(self.token).build()
 
             # Register handlers
@@ -131,6 +153,7 @@ class InviteTrackerBot:
                 self.track_new_member
             ))
             application.add_handler(CallbackQueryHandler(self.handle_check, pattern=r'^check_\d+$'))
+            application.add_handler(CallbackQueryHandler(self.handle_back, pattern=r'^back_\d+$'))
 
             # Start the bot
             logger.info("Bot started successfully!")
@@ -140,14 +163,11 @@ class InviteTrackerBot:
             logger.error(f"Failed to start bot: {e}")
 
 def main():
-    # Get bot token from environment variable
     TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
-
     if not TOKEN:
         logger.error("No bot token provided. Set TELEGRAM_BOT_TOKEN environment variable.")
         return
 
-    # Create and run bot
     bot = InviteTrackerBot(TOKEN)
     bot.run()
 
