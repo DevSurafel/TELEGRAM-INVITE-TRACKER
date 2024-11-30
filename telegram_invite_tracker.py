@@ -56,7 +56,9 @@ class InviteTrackerBot:
                 if self.invite_counts[inviter.id] % 2 == 0:
                     milestone = self.invite_counts[inviter.id]
                     await update.message.reply_text(
-                        f"🎉 Hi {inviter.first_name}, you have invited {milestone} people! Keep it up! 🚀"
+                        f"🎉 Hi {inviter.first_name}, you have invited {milestone} people! Keep it up! 🚀
+                      200 ETB Sent to your bank account 🏦
+                        "
                     )
             
             except Exception as e:
