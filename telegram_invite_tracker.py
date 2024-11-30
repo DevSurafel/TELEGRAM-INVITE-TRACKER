@@ -1,18 +1,12 @@
 import os
 import logging
 from typing import Dict
-from telegram import Update
-from telegram.ext import (
-    Application, 
-    CommandHandler, 
-    MessageHandler, 
-    filters,
-    ContextTypes
-)
+from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton
+from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 
 # Configure logging
 logging.basicConfig(
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', 
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     level=logging.INFO,
     filename='invite_tracker.log'
 )
@@ -36,7 +30,6 @@ class InviteTrackerBot:
     async def track_new_member(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         """Track new members and their inviters"""
         for new_member in update.message.new_chat_members:
-            # Try to get the inviter
             try:
                 inviter = update.message.from_user
                 
@@ -52,14 +45,35 @@ class InviteTrackerBot:
                 # Log the invite
                 logger.info(f"User {inviter.first_name} (ID: {inviter.id}) invited {new_member.first_name}")
                 
-                # Check for milestone
-                if self.invite_counts[inviter.id] % 2 == 0:
-                    milestone = self.invite_counts[inviter.id]
-                    await update.message.reply_text(
-                        f"🎉 Hi {inviter.first_name}, you have invited {milestone} people! Keep it up! 🚀
-                      200 ETB Sent to your bank account 🏦
-                        "
-                    )
+                # Get invite stats
+                invite_count = self.invite_counts[inviter.id]
+                balance = invite_count * 50
+                remaining = max(200 - invite_count, 0)
+                
+                # Milestone message
+                if invite_count % 10 == 0:
+                    if invite_count < 200:
+                        await update.message.reply_text(
+                            f"Hello {inviter.first_name}\n\n"
+                            f"Name: {inviter.first_name}\n"
+                            f"Invited: {invite_count} people\n"
+                            f"Balance: {balance} ETB\n"
+                            f"Left with: {remaining} people\n\n"
+                            "When you reach 10,000 ETB you can withdraw your money!"
+                        )
+                    elif invite_count == 200:
+                        keyboard = InlineKeyboardMarkup([
+                            [InlineKeyboardButton("Request Withdrawal", url="https://your-withdrawal-link.com")]
+                        ])
+                        await update.message.reply_text(
+                            f"🎉 Congratulations {inviter.first_name}\n\n"
+                            f"Name: {inviter.first_name}\n"
+                            f"Invited: {invite_count} people\n"
+                            f"Balance: {balance} ETB\n"
+                            f"Left with: 0 people\n\n"
+                            "Now you can send a withdrawal request by clicking the button below!",
+                            reply_markup=keyboard
+                        )
             
             except Exception as e:
                 logger.error(f"Error tracking invite: {e}")
@@ -82,7 +96,7 @@ class InviteTrackerBot:
             application.add_handler(CommandHandler("start", self.start))
             application.add_handler(CommandHandler("invites", self.show_invite_count))
             application.add_handler(MessageHandler(
-                filters.StatusUpdate.NEW_CHAT_MEMBERS, 
+                filters.StatusUpdate.NEW_CHAT_MEMBERS,
                 self.track_new_member
             ))
             
@@ -107,20 +121,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-# Requirements file (requirements.txt)
-# python-telegram-bot==20.7
-# 
-# Installation Instructions:
-# 1. Create a virtual environment:
-#    python3 -m venv venv
-#    source venv/bin/activate
-# 
-# 2. Install requirements:
-#    pip install -r requirements.txt
-# 
-# 3. Set your Telegram Bot Token:
-#    export TELEGRAM_BOT_TOKEN='your_bot_token_here'
-# 
-# 4. Run the bot:
-#    python telegram_invite_tracker.py
