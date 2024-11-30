@@ -1,6 +1,5 @@
 import os
 import logging
-import random
 from typing import Dict
 from telegram import (
     Update, InlineKeyboardMarkup, InlineKeyboardButton
@@ -18,23 +17,19 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Data storage for user progress and withdrawal codes
+# Dictionary to store invite counts
 invite_counts: Dict[int, int] = {}
-withdrawal_codes: Dict[int, str] = {}
 
 class InviteTrackerBot:
     def __init__(self, token: str):
         self.token = token
         self.invite_counts = {}
-        self.withdrawal_codes = {}
 
     async def start(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         """Handler for the /start command"""
-        keyboard = [[InlineKeyboardButton("Check", callback_data=f"check_{update.effective_user.id}")]]
         await update.message.reply_text(
-            "Welcome! I'm an invite tracking bot. I'll keep track of how many users each person invites to the group.\n\n"
-            "Click 'Check' to view your progress!",
-            reply_markup=InlineKeyboardMarkup(keyboard)
+            "Welcome! I'm an invite tracking bot. "
+            "I'll keep track of how many users each person invites to the group."
         )
 
     async def track_new_member(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -52,23 +47,29 @@ class InviteTrackerBot:
                     self.invite_counts[inviter.id] = 0
                 self.invite_counts[inviter.id] += 1
 
+                # Get invite stats
                 invite_count = self.invite_counts[inviter.id]
+                balance = invite_count * 50
+                next_milestone = invite_count + (4 - (invite_count % 4))
+                remaining = max(next_milestone - invite_count, 0)
 
-                # Assign withdrawal code if milestone is achieved
-                if invite_count >= 6 and inviter.id not in self.withdrawal_codes:
-                    self.withdrawal_codes[inviter.id] = f"{random.randint(100000, 999999)}"
-
-                # Send milestone message
-                if invite_count % 4 == 0:
-                    keyboard = [[InlineKeyboardButton("Check", callback_data=f"check_{inviter.id}")]]
+                # Milestone logic
+                if invite_count % 4 == 0 or invite_count == 6:
+                    keyboard = [
+                        [InlineKeyboardButton("Check", callback_data=f"check_{inviter.id}")],
+                    ]
+                    if invite_count >= 6:
+                        keyboard.append(
+                            [InlineKeyboardButton("Request Withdrawal", url="https://your-withdrawal-link.com")]
+                        )
                     await update.message.reply_text(
                         f"🎉 Milestone Achieved! 🎉👏\n\n"
                         f"📋 Dashboard:\n"
                         f"-----------------------\n"
                         f"👤 Name: {inviter.first_name}\n"
                         f"👥 Invites: {invite_count} people\n"
-                        f"💰 Balance: {invite_count * 50} ETB\n"
-                        f"🚀 Next Goal: Invite 4 more\n"
+                        f"💰 Balance: {balance} ETB\n"
+                        f"🚀 Next Goal: Invite {remaining} more\n"
                         f"-----------------------\n\n"
                         f"Keep inviting to earn more rewards!",
                         reply_markup=InlineKeyboardMarkup(keyboard)
@@ -82,37 +83,31 @@ class InviteTrackerBot:
         query = update.callback_query
         user_id = int(query.data.split('_')[1])
         invite_count = self.invite_counts.get(user_id, 0)
-        balance = invite_count * 50
         next_milestone = invite_count + (4 - (invite_count % 4))
         remaining = max(next_milestone - invite_count, 0)
 
-        if invite_count >= 6:  # Milestone achieved
-            code = self.withdrawal_codes.get(user_id, "Unavailable")
+        keyboard = [[InlineKeyboardButton("Back", callback_data=f"back_{user_id}")]]
+        if invite_count % 4 == 0 or invite_count == 6:
             message = (
-                f"🎉 Milestone Achieved! 🎉👏\n\n"
-                f"📋 Dashboard:\n"
+                f"🎉 Milestone achieved 🎉\n"
                 f"-----------------------\n"
                 f"👤 Name: {query.from_user.first_name}\n"
                 f"👥 Invites: {invite_count} people\n"
-                f"💰 Balance: {balance} ETB\n"
-                f"🔑 Withdrawal Code: {code}\n"
-                f"🚀 Next Goal: Invite {remaining} more\n"
+                f"🚀 Remaining to withdrawal: {remaining} people\n"
                 f"-----------------------\n\n"
                 f"Keep inviting to earn more rewards!"
             )
-        else:  # Normal progress
+        else:
             message = (
                 f"📊 Your Progress:\n"
                 f"-----------------------\n"
                 f"👤 Name: {query.from_user.first_name}\n"
                 f"👥 Invites: {invite_count} people\n"
-                f"💰 Balance: {balance} ETB\n"
                 f"🚀 Remaining for withdrawal: {remaining} more people\n"
                 f"-----------------------\n\n"
                 f"Keep inviting to earn more rewards!"
             )
 
-        keyboard = [[InlineKeyboardButton("Back", callback_data=f"back_{user_id}")]]
         await query.answer()
         await query.edit_message_text(text=message, reply_markup=InlineKeyboardMarkup(keyboard))
 
@@ -120,19 +115,32 @@ class InviteTrackerBot:
         """Handle the 'Back' button callback"""
         query = update.callback_query
         user_id = int(query.data.split('_')[1])
+        invite_count = self.invite_counts.get(user_id, 0)
+        balance = invite_count * 50
+        next_milestone = invite_count + (4 - (invite_count % 4))
+        remaining = max(next_milestone - invite_count, 0)
 
-        keyboard = [[InlineKeyboardButton("Check", callback_data=f"check_{user_id}")]]
+        keyboard = [
+            [InlineKeyboardButton("Check", callback_data=f"check_{user_id}")],
+        ]
+        if invite_count >= 6:
+            keyboard.append(
+                [InlineKeyboardButton("Request Withdrawal", url="https://your-withdrawal-link.com")]
+            )
+
         await query.answer()
         await query.edit_message_text(
-            f"🎉 Milestone Achieved! 🎉👏\n\n"
-            f"📋 Dashboard:\n"
-            f"-----------------------\n"
-            f"👤 Name: {query.from_user.first_name}\n"
-            f"👥 Invites: {self.invite_counts.get(user_id, 0)} people\n"
-            f"💰 Balance: {self.invite_counts.get(user_id, 0) * 50} ETB\n"
-            f"🚀 Next Goal: Invite 4 more\n"
-            f"-----------------------\n\n"
-            f"Keep inviting to earn more rewards!",
+            text=(
+                f"🎉 Milestone Achieved! 🎉👏\n\n"
+                f"📋 Dashboard:\n"
+                f"-----------------------\n"
+                f"👤 Name: {query.from_user.first_name}\n"
+                f"👥 Invites: {invite_count} people\n"
+                f"💰 Balance: {balance} ETB\n"
+                f"🚀 Next Goal: Invite {remaining} more\n"
+                f"-----------------------\n\n"
+                f"Keep inviting to earn more rewards!"
+            ),
             reply_markup=InlineKeyboardMarkup(keyboard)
         )
 
