@@ -47,46 +47,6 @@ class InviteTrackerBot:
             reply_markup=InlineKeyboardMarkup(buttons)
         )
 
-    async def track_new_member(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        for new_member in update.message.new_chat_members:
-            try:
-                inviter = update.message.from_user
-
-                if inviter.id == new_member.id:
-                    continue
-
-                if inviter.id not in self.invite_counts:
-                    self.invite_counts[inviter.id] = {
-                        'invite_count': 0,
-                        'first_name': inviter.first_name,
-                        'withdrawal_key': None
-                    }
-
-                self.invite_counts[inviter.id]['invite_count'] += 1
-                invite_count = self.invite_counts[inviter.id]['invite_count']
-                first_name = self.invite_counts[inviter.id]['first_name']
-                balance = invite_count * 50
-                remaining = max(6 - invite_count, 0)
-
-                # Group message format
-                message = (
-                    f"📊 Invite Progress: \n"
-                    f"-----------------------\n"
-                    f"👤 User: {first_name}\n"
-                    f"👥 Invites: {invite_count} people\n"
-                    f"💰 Balance: {balance} ETB\n"
-                    f"🚀 Remaining for withdrawal: {remaining} more people\n"
-                    f"-----------------------\n\n"
-                    f"Keep inviting to earn more rewards!"
-                )
-
-                # Add "Check" button for group messages
-                buttons = [[InlineKeyboardButton("Check", callback_data=f"check_{inviter.id}")]]
-                await update.message.reply_text(message, reply_markup=InlineKeyboardMarkup(buttons))
-
-            except Exception as e:
-                logger.error(f"Error tracking invite: {e}")
-
     async def handle_check(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         query = update.callback_query
         user_id = int(query.data.split('_')[1])
