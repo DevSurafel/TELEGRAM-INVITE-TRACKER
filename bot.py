@@ -51,24 +51,24 @@ class InviteTrackerBot:
                     }
 
                 self.invite_counts[inviter.id]['invite_count'] += 1
-
-                keyboard = [[InlineKeyboardButton("Check", callback_data=f"check_{inviter.id}")]]
                 invite_count = self.invite_counts[inviter.id]['invite_count']
-                if invite_count >= 6:
-                    keyboard.append(
-                        [InlineKeyboardButton("Request Withdrawal", url="https://your-withdrawal-link.com")]
-                    )
+                first_name = self.invite_counts[inviter.id]['first_name']
+                balance = invite_count * 50
+                remaining = max(6 - invite_count, 0)
 
-                await update.message.reply_text(
-                    f"🎉 Milestone Achieved! 🎉👏\n\n"
-                    f"📋 Dashboard:\n"
+                # Group message format
+                message = (
+                    f"📊 Invite Progress: \n"
                     f"-----------------------\n"
-                    f"👤 Name: {inviter.first_name}\n"
+                    f"👤 User: {first_name}\n"
                     f"👥 Invites: {invite_count} people\n"
+                    f"💰 Balance: {balance} ETB\n"
+                    f"🚀 Remaining for withdrawal: {remaining} more people\n"
                     f"-----------------------\n\n"
-                    f"Keep inviting to earn more rewards!",
-                    reply_markup=InlineKeyboardMarkup(keyboard)
+                    f"Keep inviting to earn more rewards!"
                 )
+
+                await update.message.reply_text(message)
 
             except Exception as e:
                 logger.error(f"Error tracking invite: {e}")
@@ -87,27 +87,26 @@ class InviteTrackerBot:
         balance = invite_count * 50
         remaining = max(6 - invite_count, 0)
 
-        keyboard = [[InlineKeyboardButton("Back", callback_data=f"back_{user_id}")]]
+        # Generate a withdrawal key if the user has 6+ invites and no key exists
+        if invite_count >= 6 and not user_data['withdrawal_key']:
+            user_data['withdrawal_key'] = random.randint(100000, 999999)
+
         if invite_count >= 6:
-            if not user_data['withdrawal_key']:
-                user_data['withdrawal_key'] = random.randint(100000, 999999)
-            keyboard.append(
-                [InlineKeyboardButton("Request Withdrawal", url="https://your-withdrawal-link.com")]
-            )
+            withdrawal_key = user_data['withdrawal_key']
             message = (
-                f"📊 Invite Progress: @mygroup\n"
+                f"📊 Invite Progress: @mygroup \n"
                 f"-----------------------\n"
                 f"👤 User: {first_name}\n"
                 f"👥 Invites: {invite_count} people\n"
                 f"💰 Balance: {balance} ETB\n"
                 f"🚀 Remaining for withdrawal: {remaining} more people\n"
-                f"🔑 Withdrawal key: {user_data['withdrawal_key']}\n"
+                f"🔑 Withdrawal key: {withdrawal_key}\n"
                 f"-----------------------\n\n"
                 f"Keep inviting to earn more rewards!"
             )
         else:
             message = (
-                f"📊 Invite Progress: @mygroup\n"
+                f"📊 Invite Progress: @mygroup \n"
                 f"-----------------------\n"
                 f"👤 User: {first_name}\n"
                 f"👥 Invites: {invite_count} people\n"
@@ -118,43 +117,7 @@ class InviteTrackerBot:
             )
 
         await query.answer()
-        await query.edit_message_text(text=message, reply_markup=InlineKeyboardMarkup(keyboard))
-
-    async def handle_back(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        query = update.callback_query
-        user_id = int(query.data.split('_')[1])
-
-        if user_id not in self.invite_counts:
-            await query.answer("No invitation data found.")
-            return
-
-        user_data = self.invite_counts[user_id]
-        invite_count = user_data['invite_count']
-        first_name = user_data['first_name']
-        balance = invite_count * 50
-        remaining = max(6 - invite_count, 0)
-
-        keyboard = [[InlineKeyboardButton("Check", callback_data=f"check_{user_id}")]]
-        if invite_count >= 6:
-            keyboard.append(
-                [InlineKeyboardButton("Request Withdrawal", url="https://your-withdrawal-link.com")]
-            )
-
-        await query.answer()
-        await query.edit_message_text(
-            text=(
-                f"🎉 Milestone Achieved! 🎉👏\n\n"
-                f"📋 Dashboard:\n"
-                f"-----------------------\n"
-                f"👤 Name: {first_name}\n"
-                f"👥 Invites: {invite_count} people\n"
-                f"💰 Balance: {balance} ETB\n"
-                f"🚀 Remaining for withdrawal: {remaining} more\n"
-                f"-----------------------\n\n"
-                f"Keep inviting to earn more rewards!"
-            ),
-            reply_markup=InlineKeyboardMarkup(keyboard)
-        )
+        await query.edit_message_text(text=message)
 
     def run(self):
         try:
@@ -163,7 +126,6 @@ class InviteTrackerBot:
             application.add_handler(CommandHandler("start", self.start))
             application.add_handler(MessageHandler(filters.StatusUpdate.NEW_CHAT_MEMBERS, self.track_new_member))
             application.add_handler(CallbackQueryHandler(self.handle_check, pattern=r'^check_\d+$'))
-            application.add_handler(CallbackQueryHandler(self.handle_back, pattern=r'^back_\d+$'))
 
             logger.info("Bot started successfully!")
             application.run_polling(drop_pending_updates=True)
