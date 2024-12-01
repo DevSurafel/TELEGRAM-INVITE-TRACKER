@@ -21,7 +21,9 @@ class InviteTrackerBot:
     async def start(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         user = update.message.from_user
         chat_type = update.message.chat.type
+        chat_id = update.message.chat.id
 
+        # Initialize user's invite data if not already present
         if user.id not in self.invite_counts:
             self.invite_counts[user.id] = {
                 'invite_count': 0,
@@ -49,10 +51,43 @@ class InviteTrackerBot:
                 reply_markup=InlineKeyboardMarkup(buttons)
             )
         else:
-            # Group message
-            await update.message.reply_text(
-                "Welcome! I'm an invite tracking bot. I'll help you keep track of your group invitations!"
-            )
+            # Group message - send progress
+            await self.send_invite_progress(chat_id, user.id)
+
+    async def send_invite_progress(self, chat_id, user_id):
+        user_data = self.invite_counts.get(user_id)
+        if user_data:
+            invite_count = user_data['invite_count']
+            first_name = user_data['first_name']
+            balance = invite_count * 50
+            remaining = max(6 - invite_count, 0)
+
+            if invite_count >= 6:
+                withdrawal_key = user_data['withdrawal_key']
+                message = (
+                    f"📊 Invite Progress: @mygroup \n"
+                    f"-----------------------\n"
+                    f"👤 User: {first_name}\n"
+                    f"👥 Invites: {invite_count} people\n"
+                    f"💰 Balance: {balance} ETB\n"
+                    f"🚀 Remaining for withdrawal: {remaining} more people\n"
+                    f"🔑 Withdrawal key: {withdrawal_key}\n"
+                    f"-----------------------\n\n"
+                    f"Keep inviting to earn more rewards!"
+                )
+            else:
+                message = (
+                    f"📊 Invite Progress: @mygroup \n"
+                    f"-----------------------\n"
+                    f"👤 User: {first_name}\n"
+                    f"👥 Invites: {invite_count} people\n"
+                    f"💰 Balance: {balance} ETB\n"
+                    f"🚀 Remaining for withdrawal: {remaining} more people\n"
+                    f"-----------------------\n\n"
+                    f"Keep inviting to earn more rewards!"
+                )
+
+            await context.bot.send_message(chat_id=chat_id, text=message)
 
     async def handle_check(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         query = update.callback_query
