@@ -4,8 +4,7 @@ import random
 from typing import Dict
 from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton
 from telegram.ext import (
-    Application, CommandHandler, MessageHandler,
-    CallbackQueryHandler, filters, ContextTypes
+    Application, CommandHandler, CallbackQueryHandler, ContextTypes
 )
 
 logging.basicConfig(
@@ -21,6 +20,7 @@ class InviteTrackerBot:
 
     async def start(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         user = update.message.from_user
+        chat_type = update.message.chat.type
 
         if user.id not in self.invite_counts:
             self.invite_counts[user.id] = {
@@ -31,21 +31,27 @@ class InviteTrackerBot:
 
         invite_count = self.invite_counts[user.id]['invite_count']
 
-        # Private chat buttons
-        buttons = [
-            [
-                InlineKeyboardButton("Check", callback_data=f"check_{user.id}"),
-                InlineKeyboardButton("Key", callback_data=f"key_{user.id}")
+        if chat_type == "private":
+            # Private chat buttons
+            buttons = [
+                [
+                    InlineKeyboardButton("Check", callback_data=f"check_{user.id}"),
+                    InlineKeyboardButton("Key", callback_data=f"key_{user.id}")
+                ]
             ]
-        ]
 
-        if invite_count >= 6:
-            buttons.append([InlineKeyboardButton("Withdrawal Request", callback_data=f"withdraw_{user.id}")])
+            if invite_count >= 6:
+                buttons.append([InlineKeyboardButton("Withdrawal Request", callback_data=f"withdraw_{user.id}")])
 
-        await update.message.reply_text(
-            "Welcome! I'm an invite tracking bot. I'll help you keep track of your group invitations!",
-            reply_markup=InlineKeyboardMarkup(buttons)
-        )
+            await update.message.reply_text(
+                "Welcome! I'm an invite tracking bot. I'll help you keep track of your group invitations!",
+                reply_markup=InlineKeyboardMarkup(buttons)
+            )
+        else:
+            # Group message
+            await update.message.reply_text(
+                "Welcome! I'm an invite tracking bot. I'll help you keep track of your group invitations!"
+            )
 
     async def handle_check(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         query = update.callback_query
@@ -147,7 +153,6 @@ class InviteTrackerBot:
             application = Application.builder().token(self.token).build()
 
             application.add_handler(CommandHandler("start", self.start))
-            application.add_handler(MessageHandler(filters.StatusUpdate.NEW_CHAT_MEMBERS, self.track_new_member))
             application.add_handler(CallbackQueryHandler(self.handle_check, pattern=r'^check_\d+$'))
             application.add_handler(CallbackQueryHandler(self.handle_key, pattern=r'^key_\d+$'))
             application.add_handler(CallbackQueryHandler(self.handle_withdraw_request, pattern=r'^withdraw_\d+$'))
