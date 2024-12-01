@@ -2,7 +2,10 @@ import os
 import logging
 from typing import Dict
 from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton
-from telegram.ext import Application, CommandHandler, MessageHandler, CallbackQueryHandler, filters, ContextTypes
+from telegram.ext import (
+    Application, CommandHandler, MessageHandler,
+    CallbackQueryHandler, filters, ContextTypes
+)
 
 # Configure logging
 logging.basicConfig(
@@ -12,6 +15,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+
 class InviteTrackerBot:
     def __init__(self, token: str):
         self.token = token
@@ -20,7 +24,13 @@ class InviteTrackerBot:
 
     async def start(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         """Handler for the /start command"""
-        keyboard = [[InlineKeyboardButton("Check", callback_data=f"check_{update.message.from_user.id}")]]
+        user = update.message.from_user
+
+        # Initialize user's invite data if it doesn't exist
+        if user.id not in self.invite_counts:
+            self.invite_counts[user.id] = {'invite_count': 0, 'first_name': user.first_name}
+
+        keyboard = [[InlineKeyboardButton("Check", callback_data=f"check_{user.id}")]]
         await update.message.reply_text(
             "Welcome! I'm an invite tracking bot. I'll help you keep track of your group invitations!",
             reply_markup=InlineKeyboardMarkup(keyboard)
@@ -52,26 +62,23 @@ class InviteTrackerBot:
                 remaining = max(6 - invite_count, 0)
 
                 # Milestone logic
-                if invite_count % 2 == 0 or invite_count == 6:
-                    keyboard = [
-                        [InlineKeyboardButton("Check", callback_data=f"check_{inviter.id}")],
-                    ]
-                    if invite_count >= 6:
-                        keyboard.append(
-                            [InlineKeyboardButton("Request Withdrawal", url="https://your-withdrawal-link.com")]
-                        )
-                    await update.message.reply_text(
-                        f"🎉 Milestone Achieved! 🎉👏\n\n"
-                        f"📋 Dashboard:\n"
-                        f"-----------------------\n"
-                        f"👤 Name: {inviter.first_name}\n"
-                        f"👥 Invites: {invite_count} people\n"
-                        f"💰 Balance: {balance} ETB\n"
-                        f"🚀 Next Goal: Invite {remaining} more\n"
-                        f"-----------------------\n\n"
-                        f"Keep inviting to earn more rewards!",
-                        reply_markup=InlineKeyboardMarkup(keyboard)
+                keyboard = [[InlineKeyboardButton("Check", callback_data=f"check_{inviter.id}")]]
+                if invite_count >= 6:
+                    keyboard.append(
+                        [InlineKeyboardButton("Request Withdrawal", url="https://your-withdrawal-link.com")]
                     )
+                await update.message.reply_text(
+                    f"🎉 Milestone Achieved! 🎉👏\n\n"
+                    f"📋 Dashboard:\n"
+                    f"-----------------------\n"
+                    f"👤 Name: {inviter.first_name}\n"
+                    f"👥 Invites: {invite_count} people\n"
+                    f"💰 Balance: {balance} ETB\n"
+                    f"🚀 Next Goal: Invite {remaining} more\n"
+                    f"-----------------------\n\n"
+                    f"Keep inviting to earn more rewards!",
+                    reply_markup=InlineKeyboardMarkup(keyboard)
+                )
 
             except Exception as e:
                 logger.error(f"Error tracking invite: {e}")
@@ -80,51 +87,7 @@ class InviteTrackerBot:
         """Handle the 'Check' button callback"""
         query = update.callback_query
         user_id = int(query.data.split('_')[1])
-        
-        # Ensure the user has invite tracking
-        if user_id not in self.invite_counts:
-            await query.answer("No invitation data found.")
-            return
 
-        # Get the specific user's invite details
-        user_data = self.invite_counts[user_id]
-        invite_count = user_data['invite_count']
-        first_name = user_data['first_name']
-
-        next_milestone = invite_count + (6 - (invite_count % 2))
-        remaining = max(next_milestone - invite_count, 0)
-
-        keyboard = [[InlineKeyboardButton("Back", callback_data=f"back_{user_id}")]]
-        
-        if invite_count == 6:
-            message = (
-                f"🎉 Milestone achieved 🎉\n"
-                f"-----------------------\n"
-                f"👤 User: {first_name}\n"
-                f"👥 Invites: {invite_count} people\n"
-                f"🚀 Remaining to withdrawal: {remaining} people\n"
-                f"-----------------------\n"
-                f"Keep inviting to earn more rewards!"
-            )
-        else:
-            message = (
-                f"📊 Invite Progress:\n"
-                f"-----------------------\n"
-                f"👤 User: {first_name}\n"
-                f"👥 Invites: {invite_count} people\n"
-                f"🚀 Remaining for withdrawal: {remaining} more people\n"
-                f"-----------------------\n"
-                f"Keep inviting to earn more rewards!"
-            )
-
-        await query.answer()
-        await query.edit_message_text(text=message, reply_markup=InlineKeyboardMarkup(keyboard))
-
-    async def handle_back(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        """Handle the 'Back' button callback"""
-        query = update.callback_query
-        user_id = int(query.data.split('_')[1])
-        
         # Ensure the user has invite tracking
         if user_id not in self.invite_counts:
             await query.answer("No invitation data found.")
@@ -137,9 +100,43 @@ class InviteTrackerBot:
         balance = invite_count * 50
         remaining = max(6 - invite_count, 0)
 
-        keyboard = [
-            [InlineKeyboardButton("Check", callback_data=f"check_{user_id}")],
-        ]
+        keyboard = [[InlineKeyboardButton("Back", callback_data=f"back_{user_id}")]]
+        if invite_count >= 6:
+            keyboard.append(
+                [InlineKeyboardButton("Request Withdrawal", url="https://your-withdrawal-link.com")]
+            )
+
+        message = (
+            f"📊 Invite Progress:\n"
+            f"-----------------------\n"
+            f"👤 User: {first_name}\n"
+            f"👥 Invites: {invite_count} people\n"
+            f"💰 Balance: {balance} ETB\n"
+            f"🚀 Remaining for withdrawal: {remaining} more people\n"
+            f"-----------------------\n\n"
+            f"Keep inviting to earn more rewards!"
+        )
+        await query.answer()
+        await query.edit_message_text(text=message, reply_markup=InlineKeyboardMarkup(keyboard))
+
+    async def handle_back(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        """Handle the 'Back' button callback"""
+        query = update.callback_query
+        user_id = int(query.data.split('_')[1])
+
+        # Ensure the user has invite tracking
+        if user_id not in self.invite_counts:
+            await query.answer("No invitation data found.")
+            return
+
+        # Get the specific user's invite details
+        user_data = self.invite_counts[user_id]
+        invite_count = user_data['invite_count']
+        first_name = user_data['first_name']
+        balance = invite_count * 50
+        remaining = max(6 - invite_count, 0)
+
+        keyboard = [[InlineKeyboardButton("Check", callback_data=f"check_{user_id}")]]
         if invite_count >= 6:
             keyboard.append(
                 [InlineKeyboardButton("Request Withdrawal", url="https://your-withdrawal-link.com")]
@@ -154,7 +151,7 @@ class InviteTrackerBot:
                 f"👤 Name: {first_name}\n"
                 f"👥 Invites: {invite_count} people\n"
                 f"💰 Balance: {balance} ETB\n"
-                f"🚀 Next Goal: Invite {remaining} more\n"
+                f"🚀 Remaining for withdrawal: {remaining} more\n"
                 f"-----------------------\n\n"
                 f"Keep inviting to earn more rewards!"
             ),
@@ -182,6 +179,7 @@ class InviteTrackerBot:
         except Exception as e:
             logger.error(f"Failed to start bot: {e}")
 
+
 def main():
     TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
     if not TOKEN:
@@ -190,6 +188,7 @@ def main():
 
     bot = InviteTrackerBot(TOKEN)
     bot.run()
+
 
 if __name__ == "__main__":
     main()
