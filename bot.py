@@ -7,7 +7,9 @@ from telegram.ext import (
     Application, CommandHandler, CallbackQueryHandler, ContextTypes
 )
 from flask import Flask
+from threading import Thread
 
+# Set up logging
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     level=logging.INFO,
@@ -178,7 +180,6 @@ def main():
     bot = InviteTrackerBot(TOKEN)
     
     # Run bot in the background
-    from threading import Thread
     bot_thread = Thread(target=bot.run)
     bot_thread.start()
 
