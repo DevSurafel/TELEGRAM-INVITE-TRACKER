@@ -7,26 +7,20 @@ from telegram.ext import (
     CallbackQueryHandler, filters, ContextTypes
 )
 
-# Configure logging
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     level=logging.INFO,
-    filename='invite_tracker.log'
 )
 logger = logging.getLogger(__name__)
-
 
 class InviteTrackerBot:
     def __init__(self, token: str):
         self.token = token
-        # Store invite counts for each user
         self.invite_counts: Dict[int, Dict[str, int]] = {}
 
     async def start(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        """Handler for the /start command"""
         user = update.message.from_user
 
-        # Initialize user's invite data if it doesn't exist
         if user.id not in self.invite_counts:
             self.invite_counts[user.id] = {'invite_count': 0, 'first_name': user.first_name}
 
@@ -37,36 +31,28 @@ class InviteTrackerBot:
         )
 
     async def track_new_member(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        """Track new members and their inviters"""
         for new_member in update.message.new_chat_members:
             try:
                 inviter = update.message.from_user
 
-                # Ignore bot invites or self-joins
                 if inviter.id == new_member.id:
                     continue
 
-                # Initialize user's invite tracking if not exists
                 if inviter.id not in self.invite_counts:
-                    self.invite_counts[inviter.id] = {
-                        'invite_count': 0,
-                        'first_name': inviter.first_name
-                    }
+                    self.invite_counts[inviter.id] = {'invite_count': 0, 'first_name': inviter.first_name}
 
-                # Increment invite count
                 self.invite_counts[inviter.id]['invite_count'] += 1
 
-                # Get invite stats
                 invite_count = self.invite_counts[inviter.id]['invite_count']
                 balance = invite_count * 50
                 remaining = max(6 - invite_count, 0)
 
-                # Milestone logic
                 keyboard = [[InlineKeyboardButton("Check", callback_data=f"check_{inviter.id}")]]
                 if invite_count >= 6:
                     keyboard.append(
                         [InlineKeyboardButton("Request Withdrawal", url="https://your-withdrawal-link.com")]
                     )
+
                 await update.message.reply_text(
                     f"🎉 Milestone Achieved! 🎉👏\n\n"
                     f"📋 Dashboard:\n"
@@ -84,16 +70,13 @@ class InviteTrackerBot:
                 logger.error(f"Error tracking invite: {e}")
 
     async def handle_check(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        """Handle the 'Check' button callback"""
         query = update.callback_query
         user_id = int(query.data.split('_')[1])
 
-        # Ensure the user has invite tracking
         if user_id not in self.invite_counts:
             await query.answer("No invitation data found.")
             return
 
-        # Get the specific user's invite details
         user_data = self.invite_counts[user_id]
         invite_count = user_data['invite_count']
         first_name = user_data['first_name']
@@ -120,16 +103,13 @@ class InviteTrackerBot:
         await query.edit_message_text(text=message, reply_markup=InlineKeyboardMarkup(keyboard))
 
     async def handle_back(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        """Handle the 'Back' button callback"""
         query = update.callback_query
         user_id = int(query.data.split('_')[1])
 
-        # Ensure the user has invite tracking
         if user_id not in self.invite_counts:
             await query.answer("No invitation data found.")
             return
 
-        # Get the specific user's invite details
         user_data = self.invite_counts[user_id]
         invite_count = user_data['invite_count']
         first_name = user_data['first_name']
@@ -159,20 +139,14 @@ class InviteTrackerBot:
         )
 
     def run(self):
-        """Run the bot"""
         try:
             application = Application.builder().token(self.token).build()
 
-            # Register handlers
             application.add_handler(CommandHandler("start", self.start))
-            application.add_handler(MessageHandler(
-                filters.StatusUpdate.NEW_CHAT_MEMBERS,
-                self.track_new_member
-            ))
+            application.add_handler(MessageHandler(filters.StatusUpdate.NEW_CHAT_MEMBERS, self.track_new_member))
             application.add_handler(CallbackQueryHandler(self.handle_check, pattern=r'^check_\d+$'))
             application.add_handler(CallbackQueryHandler(self.handle_back, pattern=r'^back_\d+$'))
 
-            # Start the bot
             logger.info("Bot started successfully!")
             application.run_polling(drop_pending_updates=True)
 
