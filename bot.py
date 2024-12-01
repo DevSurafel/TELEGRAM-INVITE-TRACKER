@@ -7,9 +7,8 @@ from telegram.ext import (
     Application, CommandHandler, CallbackQueryHandler, ContextTypes
 )
 from flask import Flask
-from threading import Thread
+import asyncio
 
-# Set up logging
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     level=logging.INFO,
@@ -178,10 +177,10 @@ def main():
         return
 
     bot = InviteTrackerBot(TOKEN)
-    
-    # Run bot in the background
-    bot_thread = Thread(target=bot.run)
-    bot_thread.start()
+
+    # Create an event loop and run the bot
+    loop = asyncio.get_event_loop()
+    loop.create_task(bot.run())  # Run the bot asynchronously
 
     # Run Flask in the main thread to handle requests
     app.run(host='0.0.0.0', port=int(os.getenv('PORT', 8080)))
