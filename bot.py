@@ -6,8 +6,6 @@ from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton
 from telegram.ext import (
     Application, CommandHandler, CallbackQueryHandler, ContextTypes
 )
-from flask import Flask
-import asyncio
 
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -34,6 +32,7 @@ class InviteTrackerBot:
         invite_count = self.invite_counts[user.id]['invite_count']
 
         if chat_type == "private":
+            # Private chat buttons
             buttons = [
                 [
                     InlineKeyboardButton("Check", callback_data=f"check_{user.id}"),
@@ -41,6 +40,7 @@ class InviteTrackerBot:
                 ]
             ]
 
+            # Add "Request for Withdrawal" button if the user has 6 or more invites
             if invite_count >= 6:
                 buttons.append([InlineKeyboardButton("Withdrawal Request", callback_data=f"withdraw_{user.id}")])
 
@@ -49,6 +49,7 @@ class InviteTrackerBot:
                 reply_markup=InlineKeyboardMarkup(buttons)
             )
         else:
+            # Group message
             await update.message.reply_text(
                 "Welcome! I'm an invite tracking bot. I'll help you keep track of your group invitations!"
             )
@@ -92,6 +93,7 @@ class InviteTrackerBot:
                 f"Keep inviting to earn more rewards!"
             )
 
+        # Add a "Back" button for private chat progress view
         buttons = [[InlineKeyboardButton("Back", callback_data=f"back_{user_id}")]]
         await query.answer()
         await query.edit_message_text(text=message, reply_markup=InlineKeyboardMarkup(buttons))
@@ -163,12 +165,6 @@ class InviteTrackerBot:
         except Exception as e:
             logger.error(f"Failed to start bot: {e}")
 
-# Flask part
-app = Flask(__name__)
-
-@app.route('/')
-def index():
-    return "Bot is running!"
 
 def main():
     TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
@@ -177,13 +173,8 @@ def main():
         return
 
     bot = InviteTrackerBot(TOKEN)
+    bot.run()
 
-    # Create an event loop and run the bot
-    loop = asyncio.get_event_loop()
-    loop.create_task(bot.run())  # Run the bot asynchronously
-
-    # Run Flask in the main thread to handle requests
-    app.run(host='0.0.0.0', port=int(os.getenv('PORT', 8080)))
 
 if __name__ == "__main__":
     main()
