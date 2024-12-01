@@ -124,8 +124,10 @@ class InviteTrackerBot:
                 f"Keep inviting to earn more rewards!"
             )
 
+        # Add a "Back" button
+        buttons = [[InlineKeyboardButton("Back", callback_data=f"back_{user_id}")]]
         await query.answer()
-        await query.edit_message_text(text=message)
+        await query.edit_message_text(text=message, reply_markup=InlineKeyboardMarkup(buttons))
 
     async def handle_key(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         query = update.callback_query
@@ -157,6 +159,27 @@ class InviteTrackerBot:
         await query.answer()
         await query.edit_message_text("Your withdrawal request has been submitted!")
 
+    async def handle_back(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        query = update.callback_query
+        user_id = int(query.data.split('_')[1])
+
+        invite_count = self.invite_counts[user_id]['invite_count']
+        buttons = [
+            [
+                InlineKeyboardButton("Check", callback_data=f"check_{user_id}"),
+                InlineKeyboardButton("Key", callback_data=f"key_{user_id}")
+            ]
+        ]
+
+        if invite_count >= 6:
+            buttons.append([InlineKeyboardButton("Withdrawal Request", callback_data=f"withdraw_{user_id}")])
+
+        await query.answer()
+        await query.edit_message_text(
+            "Welcome! I'm an invite tracking bot. I'll help you keep track of your group invitations!",
+            reply_markup=InlineKeyboardMarkup(buttons)
+        )
+
     def run(self):
         try:
             application = Application.builder().token(self.token).build()
@@ -166,6 +189,7 @@ class InviteTrackerBot:
             application.add_handler(CallbackQueryHandler(self.handle_check, pattern=r'^check_\d+$'))
             application.add_handler(CallbackQueryHandler(self.handle_key, pattern=r'^key_\d+$'))
             application.add_handler(CallbackQueryHandler(self.handle_withdraw_request, pattern=r'^withdraw_\d+$'))
+            application.add_handler(CallbackQueryHandler(self.handle_back, pattern=r'^back_\d+$'))
 
             logger.info("Bot started successfully!")
             application.run_polling(drop_pending_updates=True)
