@@ -2,12 +2,7 @@ import os
 import logging
 from typing import Dict
 from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton
-from telegram.ext import (
-    Application, CommandHandler, MessageHandler,
-    CallbackQueryHandler, filters, ContextTypes
-)
-from flask import Flask
-import threading
+from telegram.ext import Application, CommandHandler, MessageHandler, CallbackQueryHandler, filters, ContextTypes
 
 # Configure logging
 logging.basicConfig(
@@ -17,18 +12,6 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Flask app for Render
-app = Flask(__name__)
-
-@app.route('/')
-def home():
-    return "Bot is running!"
-
-def run_flask():
-    """Run the Flask app to listen on the required port."""
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host='0.0.0.0', port=port)
-
 class InviteTrackerBot:
     def __init__(self, token: str):
         self.token = token
@@ -37,9 +20,10 @@ class InviteTrackerBot:
 
     async def start(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         """Handler for the /start command"""
+        keyboard = [[InlineKeyboardButton("Check", callback_data=f"check_{update.message.from_user.id}")]]
         await update.message.reply_text(
-            "Welcome! I'm an invite tracking bot. "
-            "I'll help you keep track of your group invitations!"
+            "Welcome! I'm an invite tracking bot. I'll help you keep track of your group invitations!",
+            reply_markup=InlineKeyboardMarkup(keyboard)
         )
 
     async def track_new_member(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -106,19 +90,32 @@ class InviteTrackerBot:
         user_data = self.invite_counts[user_id]
         invite_count = user_data['invite_count']
         first_name = user_data['first_name']
-        remaining = max(6 - invite_count, 0)
+
+        next_milestone = invite_count + (6 - (invite_count % 2))
+        remaining = max(next_milestone - invite_count, 0)
 
         keyboard = [[InlineKeyboardButton("Back", callback_data=f"back_{user_id}")]]
         
-        message = (
-            f"📊 Invite Progress:\n"
-            f"-----------------------\n"
-            f"👤 User: {first_name}\n"
-            f"👥 Invites: {invite_count} people\n"
-            f"🚀 Remaining for withdrawal: {remaining} more people\n"
-            f"-----------------------\n\n"
-            f"Keep inviting to earn more rewards!"
-        )
+        if invite_count == 6:
+            message = (
+                f"🎉 Milestone achieved 🎉\n"
+                f"-----------------------\n"
+                f"👤 User: {first_name}\n"
+                f"👥 Invites: {invite_count} people\n"
+                f"🚀 Remaining to withdrawal: {remaining} people\n"
+                f"-----------------------\n"
+                f"Keep inviting to earn more rewards!"
+            )
+        else:
+            message = (
+                f"📊 Invite Progress:\n"
+                f"-----------------------\n"
+                f"👤 User: {first_name}\n"
+                f"👥 Invites: {invite_count} people\n"
+                f"🚀 Remaining for withdrawal: {remaining} more people\n"
+                f"-----------------------\n"
+                f"Keep inviting to earn more rewards!"
+            )
 
         await query.answer()
         await query.edit_message_text(text=message, reply_markup=InlineKeyboardMarkup(keyboard))
@@ -128,10 +125,12 @@ class InviteTrackerBot:
         query = update.callback_query
         user_id = int(query.data.split('_')[1])
         
+        # Ensure the user has invite tracking
         if user_id not in self.invite_counts:
             await query.answer("No invitation data found.")
             return
 
+        # Get the specific user's invite details
         user_data = self.invite_counts[user_id]
         invite_count = user_data['invite_count']
         first_name = user_data['first_name']
@@ -175,10 +174,6 @@ class InviteTrackerBot:
             ))
             application.add_handler(CallbackQueryHandler(self.handle_check, pattern=r'^check_\d+$'))
             application.add_handler(CallbackQueryHandler(self.handle_back, pattern=r'^back_\d+$'))
-
-            # Start the Flask server in a separate thread
-            flask_thread = threading.Thread(target=run_flask)
-            flask_thread.start()
 
             # Start the bot
             logger.info("Bot started successfully!")
