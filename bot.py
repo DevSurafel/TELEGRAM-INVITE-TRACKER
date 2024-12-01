@@ -1,5 +1,6 @@
 import os
 import logging
+import random
 from typing import Dict
 from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton
 from telegram.ext import (
@@ -22,7 +23,11 @@ class InviteTrackerBot:
         user = update.message.from_user
 
         if user.id not in self.invite_counts:
-            self.invite_counts[user.id] = {'invite_count': 0, 'first_name': user.first_name}
+            self.invite_counts[user.id] = {
+                'invite_count': 0,
+                'first_name': user.first_name,
+                'withdrawal_key': None
+            }
 
         keyboard = [[InlineKeyboardButton("Check", callback_data=f"check_{user.id}")]]
         await update.message.reply_text(
@@ -39,15 +44,16 @@ class InviteTrackerBot:
                     continue
 
                 if inviter.id not in self.invite_counts:
-                    self.invite_counts[inviter.id] = {'invite_count': 0, 'first_name': inviter.first_name}
+                    self.invite_counts[inviter.id] = {
+                        'invite_count': 0,
+                        'first_name': inviter.first_name,
+                        'withdrawal_key': None
+                    }
 
                 self.invite_counts[inviter.id]['invite_count'] += 1
 
-                invite_count = self.invite_counts[inviter.id]['invite_count']
-                balance = invite_count * 50
-                remaining = max(6 - invite_count, 0)
-
                 keyboard = [[InlineKeyboardButton("Check", callback_data=f"check_{inviter.id}")]]
+                invite_count = self.invite_counts[inviter.id]['invite_count']
                 if invite_count >= 6:
                     keyboard.append(
                         [InlineKeyboardButton("Request Withdrawal", url="https://your-withdrawal-link.com")]
@@ -59,8 +65,6 @@ class InviteTrackerBot:
                     f"-----------------------\n"
                     f"👤 Name: {inviter.first_name}\n"
                     f"👥 Invites: {invite_count} people\n"
-                    f"💰 Balance: {balance} ETB\n"
-                    f"🚀 Next Goal: Invite {remaining} more\n"
                     f"-----------------------\n\n"
                     f"Keep inviting to earn more rewards!",
                     reply_markup=InlineKeyboardMarkup(keyboard)
@@ -85,20 +89,34 @@ class InviteTrackerBot:
 
         keyboard = [[InlineKeyboardButton("Back", callback_data=f"back_{user_id}")]]
         if invite_count >= 6:
+            if not user_data['withdrawal_key']:
+                user_data['withdrawal_key'] = random.randint(100000, 999999)
             keyboard.append(
                 [InlineKeyboardButton("Request Withdrawal", url="https://your-withdrawal-link.com")]
             )
+            message = (
+                f"📊 Invite Progress: @mygroup\n"
+                f"-----------------------\n"
+                f"👤 User: {first_name}\n"
+                f"👥 Invites: {invite_count} people\n"
+                f"💰 Balance: {balance} ETB\n"
+                f"🚀 Remaining for withdrawal: {remaining} more people\n"
+                f"🔑 Withdrawal key: {user_data['withdrawal_key']}\n"
+                f"-----------------------\n\n"
+                f"Keep inviting to earn more rewards!"
+            )
+        else:
+            message = (
+                f"📊 Invite Progress: @mygroup\n"
+                f"-----------------------\n"
+                f"👤 User: {first_name}\n"
+                f"👥 Invites: {invite_count} people\n"
+                f"💰 Balance: {balance} ETB\n"
+                f"🚀 Remaining for withdrawal: {remaining} more people\n"
+                f"-----------------------\n\n"
+                f"Keep inviting to earn more rewards!"
+            )
 
-        message = (
-            f"📊 Invite Progress:\n"
-            f"-----------------------\n"
-            f"👤 User: {first_name}\n"
-            f"👥 Invites: {invite_count} people\n"
-            f"💰 Balance: {balance} ETB\n"
-            f"🚀 Remaining for withdrawal: {remaining} more people\n"
-            f"-----------------------\n\n"
-            f"Keep inviting to earn more rewards!"
-        )
         await query.answer()
         await query.edit_message_text(text=message, reply_markup=InlineKeyboardMarkup(keyboard))
 
