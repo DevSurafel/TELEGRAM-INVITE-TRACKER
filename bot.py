@@ -31,7 +31,7 @@ class InviteTrackerBot:
 
         invite_count = self.invite_counts[user.id]['invite_count']
 
-        # Buttons for private chat
+        # Private chat buttons
         buttons = [
             [
                 InlineKeyboardButton("Check", callback_data=f"check_{user.id}"),
@@ -80,7 +80,9 @@ class InviteTrackerBot:
                     f"Keep inviting to earn more rewards!"
                 )
 
-                await update.message.reply_text(message)
+                # Add "Check" button for group messages
+                buttons = [[InlineKeyboardButton("Check", callback_data=f"check_{inviter.id}")]]
+                await update.message.reply_text(message, reply_markup=InlineKeyboardMarkup(buttons))
 
             except Exception as e:
                 logger.error(f"Error tracking invite: {e}")
@@ -124,7 +126,7 @@ class InviteTrackerBot:
                 f"Keep inviting to earn more rewards!"
             )
 
-        # Add a "Back" button
+        # Add a "Back" button for private chat progress view
         buttons = [[InlineKeyboardButton("Back", callback_data=f"back_{user_id}")]]
         await query.answer()
         await query.edit_message_text(text=message, reply_markup=InlineKeyboardMarkup(buttons))
