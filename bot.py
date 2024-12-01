@@ -40,6 +40,7 @@ class InviteTrackerBot:
                 ]
             ]
 
+            # Add "Request for Withdrawal" button if the user has 6 or more invites
             if invite_count >= 6:
                 buttons.append([InlineKeyboardButton("Withdrawal Request", callback_data=f"withdraw_{user.id}")])
 
