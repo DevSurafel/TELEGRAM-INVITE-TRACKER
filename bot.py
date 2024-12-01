@@ -1,4 +1,3 @@
-
 import os
 import logging
 from typing import Dict
@@ -18,19 +17,17 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Dictionary to store invite counts
-invite_counts: Dict[int, int] = {}
-
 class InviteTrackerBot:
     def __init__(self, token: str):
         self.token = token
-        self.invite_counts = {}
+        # Store invite counts for each user
+        self.invite_counts: Dict[int, Dict[str, int]] = {}
 
     async def start(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         """Handler for the /start command"""
         await update.message.reply_text(
             "Welcome! I'm an invite tracking bot. "
-          
+            "I'll help you keep track of your group invitations!"
         )
 
     async def track_new_member(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -43,19 +40,24 @@ class InviteTrackerBot:
                 if inviter.id == new_member.id:
                     continue
 
-                # Update invite count
+                # Initialize user's invite tracking if not exists
                 if inviter.id not in self.invite_counts:
-                    self.invite_counts[inviter.id] = 0
-                self.invite_counts[inviter.id] += 1
+                    self.invite_counts[inviter.id] = {
+                        'invite_count': 0,
+                        'first_name': inviter.first_name
+                    }
+
+                # Increment invite count
+                self.invite_counts[inviter.id]['invite_count'] += 1
 
                 # Get invite stats
-                invite_count = self.invite_counts[inviter.id]
+                invite_count = self.invite_counts[inviter.id]['invite_count']
                 balance = invite_count * 50
-                next_milestone = invite_count + (4 - (invite_count % 4))
+                next_milestone = invite_count + (6 - (invite_count % 2))
                 remaining = max(next_milestone - invite_count, 0)
 
                 # Milestone logic
-                if invite_count % 4 == 0 or invite_count == 6:
+                if invite_count % 2 == 0 or invite_count == 6:
                     keyboard = [
                         [InlineKeyboardButton("Check", callback_data=f"check_{inviter.id}")],
                     ]
@@ -83,28 +85,47 @@ class InviteTrackerBot:
         """Handle the 'Check' button callback"""
         query = update.callback_query
         user_id = int(query.data.split('_')[1])
-        invite_count = self.invite_counts.get(user_id, 0)
-        next_milestone = invite_count + (4 - (invite_count % 4))
+        
+        # Ensure the user has invite tracking
+        if user_id not in self.invite_counts:
+            await query.answer("No invitation data found.")
+            return
+
+        # Get the specific user's invite details
+        user_data = self.invite_counts[user_id]
+        invite_count = user_data['invite_count']
+        first_name = user_data['first_name']
+
+        # Requesting user's details
+        requester_id = query.from_user.id
+        requester_data = self.invite_counts.get(requester_id, {'invite_count': 0, 'first_name': query.from_user.first_name})
+        
+        next_milestone = invite_count + (6 - (invite_count % 2))
         remaining = max(next_milestone - invite_count, 0)
 
         keyboard = [[InlineKeyboardButton("Back", callback_data=f"back_{user_id}")]]
-        if invite_count % 4 == 0 or invite_count == 6:
+        
+        if invite_count % 2 == 0 or invite_count == 6:
             message = (
                 f"🎉 Milestone achieved 🎉\n"
                 f"-----------------------\n"
-                f"👤 Name: {query.from_user.first_name}\n"
-                f"👥 Invites: {invite_count} people\n"
+                f"👤 Milestone User: {first_name}\n"
+                f"👥 Milestone User's Invites: {invite_count} people\n"
                 f"🚀 Remaining to withdrawal: {remaining} people\n"
+                f"-----------------------\n"
+                f"👤 Your Invites: {requester_data['invite_count']} people\n"
                 f"-----------------------\n\n"
                 f"Keep inviting to earn more rewards!"
             )
         else:
             message = (
-                f"📊 Your Progress:\n"
+                f"📊 Invite Progress:\n"
                 f"-----------------------\n"
-                f"👤 Name: {query.from_user.first_name}\n"
-                f"👥 Invites: {invite_count} people\n"
+                f"👤 Milestone User: {first_name}\n"
+                f"👥 Milestone User's Invites: {invite_count} people\n"
                 f"🚀 Remaining for withdrawal: {remaining} more people\n"
+                f"-----------------------\n"
+                f"👤 Your Invites: {requester_data['invite_count']} people\n"
                 f"-----------------------\n\n"
                 f"Keep inviting to earn more rewards!"
             )
@@ -116,9 +137,18 @@ class InviteTrackerBot:
         """Handle the 'Back' button callback"""
         query = update.callback_query
         user_id = int(query.data.split('_')[1])
-        invite_count = self.invite_counts.get(user_id, 0)
+        
+        # Ensure the user has invite tracking
+        if user_id not in self.invite_counts:
+            await query.answer("No invitation data found.")
+            return
+
+        # Get the specific user's invite details
+        user_data = self.invite_counts[user_id]
+        invite_count = user_data['invite_count']
+        first_name = user_data['first_name']
         balance = invite_count * 50
-        next_milestone = invite_count + (4 - (invite_count % 4))
+        next_milestone = invite_count + (2 - (invite_count % 2))
         remaining = max(next_milestone - invite_count, 0)
 
         keyboard = [
@@ -135,7 +165,7 @@ class InviteTrackerBot:
                 f"🎉 Milestone Achieved! 🎉👏\n\n"
                 f"📋 Dashboard:\n"
                 f"-----------------------\n"
-                f"👤 Name: {query.from_user.first_name}\n"
+                f"👤 Name: {first_name}\n"
                 f"👥 Invites: {invite_count} people\n"
                 f"💰 Balance: {balance} ETB\n"
                 f"🚀 Next Goal: Invite {remaining} more\n"
