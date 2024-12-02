@@ -147,7 +147,7 @@ class InviteTrackerBot:
             reply_markup=InlineKeyboardMarkup(buttons)
         )
 
-    def run(self):
+    async def run(self):
         try:
             application = Application.builder().token(self.token).build()
 
@@ -158,7 +158,7 @@ class InviteTrackerBot:
             application.add_handler(CallbackQueryHandler(self.handle_back, pattern=r'^back_\d+$'))
 
             logger.info("Bot started successfully!")
-            application.run_polling(drop_pending_updates=True)
+            await application.run_polling(drop_pending_updates=True)  # Await this asynchronously
 
         except Exception as e:
             logger.error(f"Failed to start bot: {e}")
@@ -181,7 +181,7 @@ def main():
     # Run bot in the background with asyncio.run
     from threading import Thread
     def run_bot():
-        asyncio.run(bot.run())
+        asyncio.run(bot.run())  # Now we can await the bot.run() properly
 
     bot_thread = Thread(target=run_bot)
     bot_thread.start()
