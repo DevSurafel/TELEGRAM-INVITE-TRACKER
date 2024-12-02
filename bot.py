@@ -6,8 +6,6 @@ from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton
 from telegram.ext import (
     Application, CommandHandler, CallbackQueryHandler, ContextTypes
 )
-from flask import Flask
-import asyncio
 
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -147,7 +145,7 @@ class InviteTrackerBot:
             reply_markup=InlineKeyboardMarkup(buttons)
         )
 
-    async def run(self):
+    def run(self):
         try:
             application = Application.builder().token(self.token).build()
 
@@ -158,17 +156,10 @@ class InviteTrackerBot:
             application.add_handler(CallbackQueryHandler(self.handle_back, pattern=r'^back_\d+$'))
 
             logger.info("Bot started successfully!")
-            await application.run_polling(drop_pending_updates=True)  # Await this asynchronously
+            application.run_polling(drop_pending_updates=True)
 
         except Exception as e:
             logger.error(f"Failed to start bot: {e}")
-
-# Flask part
-app = Flask(__name__)
-
-@app.route('/')
-def index():
-    return "Bot is running!"
 
 def main():
     TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
@@ -177,17 +168,7 @@ def main():
         return
 
     bot = InviteTrackerBot(TOKEN)
-    
-    # Run bot in the background with asyncio.run
-    from threading import Thread
-    def run_bot():
-        asyncio.run(bot.run())  # Now we can await the bot.run() properly
-
-    bot_thread = Thread(target=run_bot)
-    bot_thread.start()
-
-    # Run Flask in the main thread to handle requests
-    app.run(host='0.0.0.0', port=int(os.getenv('PORT', 8080)))
+    bot.run()
 
 if __name__ == "__main__":
     main()
