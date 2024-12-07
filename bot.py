@@ -179,7 +179,7 @@ def main():
     thread.start()
 
     # Run the Flask app to keep the service alive
-    app.run(host='0.0.0.0', port=int(os.getenv('PORT', 5000)))
+    app.run(host='0.0.0.0', port=int(os.getenv('PORT', 5000)), use_reloader=False)
 
 if __name__ == "__main__":
     main()
