@@ -20,11 +20,17 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 class InviteTrackerBot:
-    def __init__(self, token: str):
+    def __init__(self, token: str, target_group_id: int):
         self.token = token
+        self.target_group_id = target_group_id
         self.invite_counts: Dict[int, Dict[str, int]] = {}
 
     async def start(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        # Check if the command is used in the target group
+        if update.message.chat_id != self.target_group_id:
+            await update.message.reply_text("This bot only works in the specified group.")
+            return
+
         user = update.message.from_user
         if user.id not in self.invite_counts:
             self.invite_counts[user.id] = {
@@ -71,6 +77,10 @@ class InviteTrackerBot:
         await update.message.reply_text(message, reply_markup=InlineKeyboardMarkup(buttons))
 
     async def track_new_member(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        # Check if the new member is added in the target group
+        if update.message.chat_id != self.target_group_id:
+            return
+
         for new_member in update.message.new_chat_members:
             try:
                 inviter = update.message.from_user
@@ -108,13 +118,13 @@ class InviteTrackerBot:
                     else:
                         message = (
                          f"📊 Invite Progress: @Digital_Birri\n"
-                f"-----------------------\n"
-                f"👤 User: {first_name}\n"
-                f"👥 Invites: Nama {invite_count} afeertaniittu \n"
-                f"💰 Balance: {balance} ETB\n"
-                f"🚀 Baafachuuf: Dabalataan nama {remaining} afeeraa\n"
-                f"-----------------------\n\n"
-                f"Add gochuun carraa badhaasaa keessan dabalaa!"
+                        f"-----------------------\n"
+                        f"👤 User: {first_name}\n"
+                        f"👥 Invites: Nama {invite_count} afeertaniittu \n"
+                        f"💰 Balance: {balance} ETB\n"
+                        f"🚀 Baafachuuf: Dabalataan nama {remaining} afeeraa\n"
+                        f"-----------------------\n\n"
+                        f"Add gochuun carraa badhaasaa keessan dabalaa!"
                         )
                         buttons = [
                             [InlineKeyboardButton("Check", callback_data=f"check_{inviter.id}")]
@@ -126,6 +136,11 @@ class InviteTrackerBot:
                 logger.error(f"Error tracking invite: {e}")
 
     async def handle_check(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        # Check if the callback is from the target group
+        if update.callback_query.message.chat_id != self.target_group_id:
+            await update.callback_query.answer("This action is only allowed in the specified group.")
+            return
+
         query = update.callback_query
         user_id = int(query.data.split('_')[1])
 
@@ -153,6 +168,11 @@ class InviteTrackerBot:
         await query.answer(f"Kabajamoo {first_name}, maallaqa baafachuuf dabalataan nama {remaining} afeeruu qabdu", show_alert=True)
 
     async def handle_key(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        # Check if the callback is from the target group
+        if update.callback_query.message.chat_id != self.target_group_id:
+            await update.callback_query.answer("This action is only allowed in the specified group.")
+            return
+
         query = update.callback_query
         user_id = int(query.data.split('_')[1])
 
@@ -196,11 +216,17 @@ def index():
 
 def main():
     TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
+    TARGET_GROUP_ID = os.getenv('TARGET_GROUP_ID')  # Add this environment variable
+
     if not TOKEN:
         logger.error("No bot token provided. Set TELEGRAM_BOT_TOKEN environment variable.")
         return
 
-    bot = InviteTrackerBot(TOKEN)
+    if not TARGET_GROUP_ID:
+        logger.error("No target group ID provided. Set TARGET_GROUP_ID environment variable.")
+        return
+
+    bot = InviteTrackerBot(TOKEN, int(TARGET_GROUP_ID))
 
     # Run the bot and the Flask app in the same event loop
     loop = asyncio.get_event_loop()
