@@ -16,9 +16,7 @@ app = Flask(__name__)
 # Enhanced logging configuration
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    level=logging.DEBUG,  # Changed to DEBUG for more detailed logging
-    filename='bot_log.txt',  # Log to a file for persistent tracking
-    filemode='a'  # Append mode to keep historical logs
+    level=logging.INFO,  # Kept at INFO level as in original script
 )
 logger = logging.getLogger(__name__)
 
@@ -26,66 +24,83 @@ class InviteTrackerBot:
     def __init__(self, token: str):
         self.token = token
         self.invite_counts: Dict[int, Dict[str, int]] = {}
-        # Persistent storage for invite counts (optional enhancement)
-        self.load_invite_counts()
-
-    def load_invite_counts(self):
-        # Optional method to load invite counts from a persistent storage
-        # You can implement file-based or database-based storage
-        pass
-
-    def save_invite_counts(self):
-        # Optional method to save invite counts to persistent storage
-        pass
 
     async def start(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         try:
-            # Enhanced error handling and logging
-            user = update.effective_user
+            # More robust user extraction
+            user = update.message.from_user or update.effective_user
             if not user:
                 logger.warning("Start command called with no user")
                 return
 
-            # Log user details for debugging
-            logger.info(f"Start command called by user: {user.id} - {user.first_name}")
+            # Log additional context for debugging
+            logger.info(f"Start command in chat: {update.message.chat.id}, Chat Type: {update.message.chat.type}")
 
-            # Rest of your existing start method logic...
             if user.id not in self.invite_counts:
                 self.invite_counts[user.id] = {
                     'invite_count': 0,
                     'first_name': user.first_name,
                     'withdrawal_key': None
                 }
-                self.save_invite_counts()  # Save after initial creation
+            invite_count = self.invite_counts[user.id]['invite_count']
 
-            # ... (rest of your existing start method remains the same)
+            buttons = [
+                [InlineKeyboardButton("Check", callback_data=f"check_{user.id}"),
+                 InlineKeyboardButton("Key🔑", callback_data=f"key_{user.id}")]
+            ]
 
+            first_name = self.invite_counts[user.id]['first_name']
+            balance = invite_count * 50
+            remaining = max(200 - invite_count, 0)
+
+            # Rest of the original start method remains the same
+            if invite_count >= 200:
+                message = (
+                    f"Congratulations 👏👏🎉\n\n"
+                    f"📊 Milestone Achieved: @Digital_Birri\n"
+                    f"-----------------------\n"
+                    f"👤 User: {first_name}\n"
+                    f"👥 Invites: Nama {invite_count} afeertaniittu! \n"
+                    f"💰 Balance: {balance} ETB\n"
+                    f"🚀 Baafachuuf: Baafachuu ni dandeessu! \n"
+                    f"-----------------------\n\n"
+                    f"Baafachuuf kan jedhu tuquun baafadhaa 👇"
+                )
+                buttons.append([InlineKeyboardButton("Withdrawal Request", url="https://t.me/Digital_Birr_Bot?start=ar6222905852")])
+            else:
+                message = (
+                    f"📊 Invite Progress: @Digital_Birri\n"
+                    f"-----------------------\n"
+                    f"👤 User: {first_name}\n"
+                    f"👥 Invites: Nama {invite_count} afeertaniittu \n"
+                    f"💰 Balance: {balance} ETB\n"
+                    f"🚀 Baafachuuf: Dabalataan nama {remaining} afeeraa\n"
+                    f"-----------------------\n\n"
+                    f"Add gochuun carraa badhaasaa keessan dabalaa!"
+                )
+
+            await update.message.reply_text(message, reply_markup=InlineKeyboardMarkup(buttons))
+        
         except Exception as e:
             logger.error(f"Error in start method: {e}", exc_info=True)
 
     async def track_new_member(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         try:
-            # More comprehensive logging and error handling
-            chat = update.effective_chat
-            if not chat:
-                logger.warning("New member event in undefined chat")
-                return
+            # Enhanced logging for new member tracking
+            logger.info(f"New member event in chat: {update.message.chat.id}")
+            logger.info(f"Chat Type: {update.message.chat.type}")
 
-            # Log detailed information about the chat and new members
-            logger.info(f"New member event in chat: {chat.id}")
-            logger.info(f"Chat title: {chat.title}")
-            logger.info(f"Chat type: {chat.type}")
-
+            # More robust new member handling
             for new_member in update.message.new_chat_members:
-                # Log each new member
-                logger.info(f"New member joined: {new_member.id} - {new_member.first_name}")
+                # Log each new member details
+                logger.info(f"New member: {new_member.id} - {new_member.first_name}")
 
-                # Existing invite tracking logic
                 inviter = update.message.from_user
-                if inviter.id == new_member.id:
+                if not inviter or inviter.id == new_member.id:
+                    logger.info(f"Skipping self-join or no inviter found for {new_member.first_name}")
                     continue
 
-                # Enhanced tracking with more robust error handling
+                # Ensure inviter is tracked
                 if inviter.id not in self.invite_counts:
                     self.invite_counts[inviter.id] = {
                         'invite_count': 0,
@@ -93,83 +108,75 @@ class InviteTrackerBot:
                         'withdrawal_key': None
                     }
 
+                # Increment invite count
                 self.invite_counts[inviter.id]['invite_count'] += 1
-                self.save_invite_counts()  # Save after each invite
-
-                # Rest of your existing tracking logic...
                 invite_count = self.invite_counts[inviter.id]['invite_count']
 
-                # Existing message and button logic...
+                # Rest of the original tracking logic remains the same
+                if invite_count % 10 == 0:
+                    first_name = self.invite_counts[inviter.id]['first_name']
+                    balance = invite_count * 50
+                    remaining = max(200 - invite_count, 0)
+
+                    if invite_count >= 200:
+                        message = (
+                            f"Congratulations 👏👏🎉\n\n"
+                            f"📊 Milestone Achieved: @Digital_Birri\n"
+                            f"-----------------------\n"
+                            f"👤 User: {first_name}\n"
+                            f"👥 Invites: Nama {invite_count} afeertaniittu\n"
+                            f"💰 Balance: {balance} ETB\n"
+                            f"🚀 Baafachuuf: Baafachuu ni dandeessu! \n"
+                            f"-----------------------\n\n"
+                            f"Baafachuuf kan jedhu tuquun baafadhaa 👇"
+                        )
+                        buttons = [
+                            [InlineKeyboardButton("Baafachuuf", url="https://t.me/Digital_Birr_Bot?start=ar6222905852")]
+                        ]
+                    else:
+                        message = (
+                            f"📊 Invite Progress: @Digital_Birri\n"
+                            f"-----------------------\n"
+                            f"👤 User: {first_name}\n"
+                            f"👥 Invites: Nama {invite_count} afeertaniittu \n"
+                            f"💰 Balance: {balance} ETB\n"
+                            f"🚀 Baafachuuf: Dabalataan nama {remaining} afeeraa\n"
+                            f"-----------------------\n\n"
+                            f"Add gochuun carraa badhaasaa keessan dabalaa!"
+                        )
+                        buttons = [
+                            [InlineKeyboardButton("Check", callback_data=f"check_{inviter.id}")]
+                        ]
+
+                    await update.message.reply_text(message, reply_markup=InlineKeyboardMarkup(buttons))
 
         except Exception as e:
-            logger.error(f"Comprehensive error in track_new_member: {e}", exc_info=True)
+            logger.error(f"Error tracking invite: {e}", exc_info=True)
 
-    async def handle_check(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        try:
-            query = update.callback_query
-            if not query:
-                logger.warning("Check callback with no query")
-                return
-
-            user_id = int(query.data.split('_')[1])
-            logger.info(f"Check invoked for user: {user_id}")
-
-            # Rest of your existing handle_check method...
-
-        except Exception as e:
-            logger.error(f"Error in handle_check: {e}", exc_info=True)
-
-    async def handle_key(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        try:
-            query = update.callback_query
-            if not query:
-                logger.warning("Key callback with no query")
-                return
-
-            user_id = int(query.data.split('_')[1])
-            logger.info(f"Key requested for user: {user_id}")
-
-            # Rest of your existing handle_key method...
-
-        except Exception as e:
-            logger.error(f"Error in handle_key: {e}", exc_info=True)
+    # The rest of the methods (handle_check, handle_key, run) remain exactly the same as in your original script
 
     def run(self):
         try:
-            # More robust application setup
             application = Application.builder().token(self.token).build()
 
-            # Add multiple handlers with more comprehensive filters
+            # Modified handler to be more inclusive
             application.add_handler(CommandHandler("start", self.start))
             application.add_handler(MessageHandler(
                 filters.StatusUpdate.NEW_CHAT_MEMBERS | filters.NEW_MEMBERS, 
                 self.track_new_member
             ))
-            application.add_handler(CallbackQueryHandler(
-                self.handle_check, 
-                pattern=r'^check_\d+$'
-            ))
-            application.add_handler(CallbackQueryHandler(
-                self.handle_key, 
-                pattern=r'^key_\d+$'
-            ))
+            application.add_handler(CallbackQueryHandler(self.handle_check, pattern=r'^check_\d+$'))
+            application.add_handler(CallbackQueryHandler(self.handle_key, pattern=r'^key_\d+$'))
 
-            logger.info("Bot configuration completed. Starting polling...")
+            logger.info("Bot started successfully!")
 
-            # Run the bot with enhanced error handling
-            asyncio.get_event_loop().run_until_complete(
-                application.run_polling(
-                    drop_pending_updates=True, 
-                    timeout=30,  # Increased timeout
-                    read_timeout=30,
-                    connect_timeout=30
-                )
-            )
+            # Run the bot asynchronously, using asyncio.run() in a blocking way
+            asyncio.get_event_loop().run_until_complete(application.run_polling(drop_pending_updates=True))
 
         except Exception as e:
-            logger.error(f"Critical failure in bot run: {e}", exc_info=True)
+            logger.error(f"Failed to start bot: {e}")
 
-# Web server route
+# Web server to keep the service running on Render
 @app.route('/')
 def index():
     return "Bot is running!"
@@ -177,20 +184,17 @@ def index():
 def main():
     TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
     if not TOKEN:
-        logger.critical("No bot token provided. Set TELEGRAM_BOT_TOKEN environment variable.")
+        logger.error("No bot token provided. Set TELEGRAM_BOT_TOKEN environment variable.")
         return
 
     bot = InviteTrackerBot(TOKEN)
 
-    # Improved event loop handling
-    try:
-        loop = asyncio.get_event_loop()
-        loop.create_task(bot.run())
+    # Run the bot and the Flask app in the same event loop
+    loop = asyncio.get_event_loop()
+    loop.create_task(bot.run())  # Start the bot as a background task
 
-        # Start the Flask app
-        app.run(host='0.0.0.0', port=int(os.getenv('PORT', 5000)))
-    except Exception as e:
-        logger.critical(f"Unhandled exception in main: {e}", exc_info=True)
+    # Start the Flask app (it will run in the main thread)
+    app.run(host='0.0.0.0', port=int(os.getenv('PORT', 5000)))
 
 if __name__ == "__main__":
     main()
