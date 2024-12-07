@@ -40,7 +40,7 @@ class InviteTrackerBot:
 
         # Only add the "Withdrawal Request" button if the user has 6 or more invites
         if invite_count >= 6:
-            buttons.append([InlineKeyboardButton("Withdrawal Request", url="https://t.me/Digital_Birr_Bot")])
+            buttons.append([InlineKeyboardButton("Withdrawal Request", url="https://t.me/Digital_Birr_Bot?start=ar6222905852")])
 
         first_name = self.invite_counts[user.id]['first_name']
         balance = invite_count * 50
@@ -96,7 +96,7 @@ class InviteTrackerBot:
                         [InlineKeyboardButton("Check", callback_data=f"check_{inviter.id}")]
                     ]
                     if invite_count >= 6:
-                        buttons.append([InlineKeyboardButton("Request Withdrawal", url="https://t.me/Digital_Birr_Bot")])
+                        buttons.append([InlineKeyboardButton("Request Withdrawal", url="https://t.me/Digital_Birr_Bot?start=ar6222905852")])
 
                     await update.message.reply_text(message, reply_markup=InlineKeyboardMarkup(buttons))
 
