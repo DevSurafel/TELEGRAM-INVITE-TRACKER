@@ -40,7 +40,7 @@ class InviteTrackerBot:
         ]
 
         if invite_count >= 6:
-            buttons.append([InlineKeyboardButton("Withdrawal Request", callback_data=f"withdraw_{user.id}")])
+            buttons.append([InlineKeyboardButton("Withdrawal Request", url="https://t.me/withdraw_bot")])
 
         await update.message.reply_text(
             "Welcome! I'm an invite tracking bot. I'll help you keep track of your group invitations!",
@@ -64,28 +64,31 @@ class InviteTrackerBot:
 
                 self.invite_counts[inviter.id]['invite_count'] += 1
                 invite_count = self.invite_counts[inviter.id]['invite_count']
-                first_name = self.invite_counts[inviter.id]['first_name']
-                balance = invite_count * 50
-                remaining = max(6 - invite_count, 0)
 
-                # Group message format
-                message = (
-                    f"📊 Invite Progress: \n"
-                    f"-----------------------\n"
-                    f"👤 User: {first_name}\n"
-                    f"👥 Invites: {invite_count} people\n"
-                    f"💰 Balance: {balance} ETB\n"
-                    f"🚀 Remaining for withdrawal: {remaining} more people\n"
-                    f"-----------------------\n\n"
-                    f"Keep inviting to earn more rewards!"
-                )
+                # Only send message if invite count is a multiple of 2
+                if invite_count % 2 == 0:
+                    first_name = self.invite_counts[inviter.id]['first_name']
+                    balance = invite_count * 50
+                    remaining = max(6 - invite_count, 0)
 
-                # Add "Check" and "Request Withdrawal" buttons for group messages
-                buttons = [[InlineKeyboardButton("Check", callback_data=f"check_{inviter.id}")]]
-                if invite_count >= 6:
-                    buttons.append([InlineKeyboardButton("Request Withdrawal", callback_data=f"withdraw_{inviter.id}")])
+                    # Group message format
+                    message = (
+                        f"📊 Invite Progress: \n"
+                        f"-----------------------\n"
+                        f"👤 User: {first_name}\n"
+                        f"👥 Invites: {invite_count} people\n"
+                        f"💰 Balance: {balance} ETB\n"
+                        f"🚀 Remaining for withdrawal: {remaining} more people\n"
+                        f"-----------------------\n\n"
+                        f"Keep inviting to earn more rewards!"
+                    )
 
-                await update.message.reply_text(message, reply_markup=InlineKeyboardMarkup(buttons))
+                    # Add "Check" and "Request Withdrawal" buttons for group messages
+                    buttons = [[InlineKeyboardButton("Check", callback_data=f"check_{inviter.id}")]]
+                    if invite_count >= 6:
+                        buttons.append([InlineKeyboardButton("Request Withdrawal", url="https://t.me/withdraw_bot")])
+
+                    await update.message.reply_text(message, reply_markup=InlineKeyboardMarkup(buttons))
 
             except Exception as e:
                 logger.error(f"Error tracking invite: {e}")
@@ -136,17 +139,6 @@ class InviteTrackerBot:
         else:
             await query.answer("You need to invite more people to get a key!", show_alert=True)
 
-    async def handle_withdraw_request(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        query = update.callback_query
-        user_id = int(query.data.split('_')[1])
-
-        if user_id not in self.invite_counts or self.invite_counts[user_id]['invite_count'] < 6:
-            await query.answer("You are not eligible for withdrawal.")
-            return
-
-        await query.answer()
-        await query.edit_message_text("Your withdrawal request has been submitted!")
-
     def run(self):
         try:
             application = Application.builder().token(self.token).build()
@@ -155,7 +147,6 @@ class InviteTrackerBot:
             application.add_handler(MessageHandler(filters.StatusUpdate.NEW_CHAT_MEMBERS, self.track_new_member))
             application.add_handler(CallbackQueryHandler(self.handle_check, pattern=r'^check_\d+$'))
             application.add_handler(CallbackQueryHandler(self.handle_key, pattern=r'^key_\d+$'))
-            application.add_handler(CallbackQueryHandler(self.handle_withdraw_request, pattern=r'^withdraw_\d+$'))
 
             logger.info("Bot started successfully!")
             application.run_polling(drop_pending_updates=True)
