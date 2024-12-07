@@ -41,9 +41,9 @@ class InviteTrackerBot:
 
         first_name = self.invite_counts[user.id]['first_name']
         balance = invite_count * 50
-        remaining = max(6 - invite_count, 0)
+        remaining = max(200 - invite_count, 0)
 
-        if invite_count >= 6:
+        if invite_count >= 200:
             message = (
                 f"Congratulations 👏👏🎉\n\n"
                 f"📊 Milestone Achieved: @Digital_Birri\n"
@@ -85,12 +85,12 @@ class InviteTrackerBot:
                 self.invite_counts[inviter.id]['invite_count'] += 1
                 invite_count = self.invite_counts[inviter.id]['invite_count']
 
-                if invite_count % 2 == 0:
+                if invite_count % 10 == 0:
                     first_name = self.invite_counts[inviter.id]['first_name']
                     balance = invite_count * 50
-                    remaining = max(6 - invite_count, 0)
+                    remaining = max(200 - invite_count, 0)
 
-                    if invite_count >= 6:
+                    if invite_count >= 200:
                         message = (
                             f"Congratulations 👏👏🎉\n\n"
                             f"📊 Milestone Achieved: @Digital_Birri\n"
@@ -137,7 +137,7 @@ class InviteTrackerBot:
         invite_count = user_data['invite_count']
         first_name = user_data['first_name']
         balance = invite_count * 50
-        remaining = max(6 - invite_count, 0)
+        remaining = max(200 - invite_count, 0)
 
         message = (
            f"📊 Invite Progress: @Digital_Birri\n"
@@ -164,7 +164,7 @@ class InviteTrackerBot:
         invite_count = user_data['invite_count']
         first_name = user_data['first_name']
 
-        if invite_count >= 6:
+        if invite_count >= 200:
             if not user_data['withdrawal_key']:
                 user_data['withdrawal_key'] = random.randint(100000, 999999)
             withdrawal_key = user_data['withdrawal_key']
