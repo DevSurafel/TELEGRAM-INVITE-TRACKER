@@ -2,6 +2,7 @@ import os
 import logging
 import random
 from typing import Dict
+import asyncio
 from flask import Flask
 from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton
 from telegram.ext import (
@@ -155,7 +156,7 @@ class InviteTrackerBot:
             application.add_handler(CallbackQueryHandler(self.handle_key, pattern=r'^key_\d+$'))
 
             logger.info("Bot started successfully!")
-            application.run_polling(drop_pending_updates=True)
+            asyncio.run(application.run_polling(drop_pending_updates=True))  # Use asyncio to run the bot
 
         except Exception as e:
             logger.error(f"Failed to start bot: {e}")
@@ -173,13 +174,15 @@ def main():
 
     bot = InviteTrackerBot(TOKEN)
 
-    # Run the bot in the background and start the web service
+    # Run the bot and the Flask app in separate threads
     from threading import Thread
-    thread = Thread(target=bot.run)
+
+    # Start the bot in the main thread
+    thread = Thread(target=bot.run)  # Now it runs bot in the same thread
     thread.start()
 
     # Run the Flask app to keep the service alive
-    app.run(host='0.0.0.0', port=int(os.getenv('PORT', 5000)), use_reloader=False)
+    app.run(host='0.0.0.0', port=int(os.getenv('PORT', 5000)))
 
 if __name__ == "__main__":
     main()
