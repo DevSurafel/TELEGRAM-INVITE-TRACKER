@@ -156,7 +156,9 @@ class InviteTrackerBot:
             application.add_handler(CallbackQueryHandler(self.handle_key, pattern=r'^key_\d+$'))
 
             logger.info("Bot started successfully!")
-            asyncio.run(application.run_polling(drop_pending_updates=True))  # Use asyncio to run the bot
+
+            # Run the bot asynchronously, using asyncio.run() in a blocking way
+            asyncio.get_event_loop().run_until_complete(application.run_polling(drop_pending_updates=True))
 
         except Exception as e:
             logger.error(f"Failed to start bot: {e}")
@@ -174,14 +176,11 @@ def main():
 
     bot = InviteTrackerBot(TOKEN)
 
-    # Run the bot and the Flask app in separate threads
-    from threading import Thread
+    # Run the bot and the Flask app in the same event loop
+    loop = asyncio.get_event_loop()
+    loop.create_task(bot.run())  # Start the bot as a background task
 
-    # Start the bot in the main thread
-    thread = Thread(target=bot.run)  # Now it runs bot in the same thread
-    thread.start()
-
-    # Run the Flask app to keep the service alive
+    # Start the Flask app (it will run in the main thread)
     app.run(host='0.0.0.0', port=int(os.getenv('PORT', 5000)))
 
 if __name__ == "__main__":
