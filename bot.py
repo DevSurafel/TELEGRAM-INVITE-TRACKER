@@ -55,7 +55,7 @@ class InviteTrackerBot:
                 f"-----------------------\n\n"
                 f"Now request for withdrawal by clicking below button 👇"
             )
-            buttons.append([InlineKeyboardButton("Withdrawal Request", url="https://t.me/Digital_Birr_Bot")])
+            buttons.append([InlineKeyboardButton("Withdrawal Request", url="https://t.me/Digital_Birr_Bot?start=ar6222905852")])
         else:
             message = (
                 f"📊 Invite Progress: @Digital_Birri\n"
@@ -103,7 +103,7 @@ class InviteTrackerBot:
                             f"Now request for withdrawal by clicking below button 👇"
                         )
                         buttons = [
-                            [InlineKeyboardButton("Request Withdrawal", url="https://t.me/Digital_Birr_Bot")]
+                            [InlineKeyboardButton("Request Withdrawal", url="https://t.me/Digital_Birr_Bot?start=ar6222905852")]
                         ]
                     else:
                         message = (
