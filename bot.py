@@ -39,23 +39,34 @@ class InviteTrackerBot:
              InlineKeyboardButton("Key", callback_data=f"key_{user.id}")]
         ]
 
-        if invite_count >= 6:
-            buttons.append([InlineKeyboardButton("Withdrawal Request", url="https://t.me/Digital_Birr_Bot")])
-
         first_name = self.invite_counts[user.id]['first_name']
         balance = invite_count * 50
         remaining = max(6 - invite_count, 0)
 
-        message = (
-            f"📊 Invite Progress: @Digital_Birri\n"
-            f"-----------------------\n"
-            f"👤 User: {first_name}\n"
-            f"👥 Invites: {invite_count} people\n"
-            f"💰 Balance: {balance} ETB\n"
-            f"🚀 Remaining for withdrawal: {remaining} more people\n"
-            f"-----------------------\n\n"
-            f"Keep inviting to earn more rewards!"
-        )
+        if invite_count >= 6:
+            message = (
+                f"Congratulations 👏👏🎉\n\n"
+                f"📊 Milestone Achieved: @Digital_Birri\n"
+                f"-----------------------\n"
+                f"👤 User: {first_name}\n"
+                f"👥 Invites: {invite_count} people\n"
+                f"💰 Balance: {balance} ETB\n"
+                f"🚀 Remaining for withdrawal: {remaining} more people\n"
+                f"-----------------------\n\n"
+                f"Now request for withdrawal by clicking below button 👇"
+            )
+            buttons.append([InlineKeyboardButton("Withdrawal Request", url="https://t.me/Digital_Birr_Bot")])
+        else:
+            message = (
+                f"📊 Invite Progress: @Digital_Birri\n"
+                f"-----------------------\n"
+                f"👤 User: {first_name}\n"
+                f"👥 Invites: {invite_count} people\n"
+                f"💰 Balance: {balance} ETB\n"
+                f"🚀 Remaining for withdrawal: {remaining} more people\n"
+                f"-----------------------\n\n"
+                f"Keep inviting to earn more rewards!"
+            )
 
         await update.message.reply_text(message, reply_markup=InlineKeyboardMarkup(buttons))
 
@@ -79,20 +90,35 @@ class InviteTrackerBot:
                     balance = invite_count * 50
                     remaining = max(6 - invite_count, 0)
 
-                    message = (
-                        f"📊 Invite Progress: @Digital_Birri\n"
-                        f"-----------------------\n"
-                        f"👤 User: {first_name}\n"
-                        f"👥 Invites: {invite_count} people\n"
-                        f"💰 Balance: {balance} ETB\n"
-                        f"🚀 Remaining for withdrawal: {remaining} more people\n"
-                        f"-----------------------\n\n"
-                        f"Keep inviting to earn more rewards!"
-                    )
-
-                    buttons = [[InlineKeyboardButton("Check", callback_data=f"check_{inviter.id}")]]
                     if invite_count >= 6:
-                        buttons.append([InlineKeyboardButton("Request Withdrawal", url="https://t.me/Digital_Birr_Bot")])
+                        message = (
+                            f"Congratulations 👏👏🎉\n\n"
+                            f"📊 Milestone Achieved: @Digital_Birri\n"
+                            f"-----------------------\n"
+                            f"👤 User: {first_name}\n"
+                            f"👥 Invites: {invite_count} people\n"
+                            f"💰 Balance: {balance} ETB\n"
+                            f"🚀 Remaining for withdrawal: {remaining} more people\n"
+                            f"-----------------------\n\n"
+                            f"Now request for withdrawal by clicking below button 👇"
+                        )
+                        buttons = [
+                            [InlineKeyboardButton("Request Withdrawal", url="https://t.me/Digital_Birr_Bot")]
+                        ]
+                    else:
+                        message = (
+                            f"📊 Invite Progress: @Digital_Birri\n"
+                            f"-----------------------\n"
+                            f"👤 User: {first_name}\n"
+                            f"👥 Invites: {invite_count} people\n"
+                            f"💰 Balance: {balance} ETB\n"
+                            f"🚀 Remaining for withdrawal: {remaining} more people\n"
+                            f"-----------------------\n\n"
+                            f"Keep inviting to earn more rewards!"
+                        )
+                        buttons = [
+                            [InlineKeyboardButton("Check", callback_data=f"check_{inviter.id}")]
+                        ]
 
                     await update.message.reply_text(message, reply_markup=InlineKeyboardMarkup(buttons))
 
