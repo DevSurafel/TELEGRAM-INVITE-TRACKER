@@ -36,7 +36,7 @@ class InviteTrackerBot:
 
         buttons = [
             [InlineKeyboardButton("Check", callback_data=f"check_{user.id}"),
-             InlineKeyboardButton("Key", callback_data=f"key_{user.id}")]
+             InlineKeyboardButton("Key🔑", callback_data=f"key_{user.id}")]
         ]
 
         first_name = self.invite_counts[user.id]['first_name']
@@ -49,11 +49,11 @@ class InviteTrackerBot:
                 f"📊 Milestone Achieved: @Digital_Birri\n"
                 f"-----------------------\n"
                 f"👤 User: {first_name}\n"
-                f"👥 Invites: {invite_count} people\n"
+                f"👥 Invites: Nama {invite_count} afeertaniittu! \n"
                 f"💰 Balance: {balance} ETB\n"
-                f"🚀 Remaining for withdrawal: {remaining} more people\n"
+                f"🚀 Baafachuuf: Baafachuu ni dandeessu! \n"
                 f"-----------------------\n\n"
-                f"Now request for withdrawal by clicking below button 👇"
+                f"Baafachuuf kan jedhu tuquun baafadhaa 👇"
             )
             buttons.append([InlineKeyboardButton("Withdrawal Request", url="https://t.me/Digital_Birr_Bot?start=ar6222905852")])
         else:
@@ -61,11 +61,11 @@ class InviteTrackerBot:
                 f"📊 Invite Progress: @Digital_Birri\n"
                 f"-----------------------\n"
                 f"👤 User: {first_name}\n"
-                f"👥 Invites: {invite_count} people\n"
+                f"👥 Invites: Nama {invite_count} afeertaniittu \n"
                 f"💰 Balance: {balance} ETB\n"
-                f"🚀 Remaining for withdrawal: {remaining} more people\n"
+                f"🚀 Baafachuuf: Dabalataan nama {remaining} afeeraa\n"
                 f"-----------------------\n\n"
-                f"Keep inviting to earn more rewards!"
+                f"Add gochuun carraa badhaasaa keessan dabalaa!"
             )
 
         await update.message.reply_text(message, reply_markup=InlineKeyboardMarkup(buttons))
@@ -96,25 +96,25 @@ class InviteTrackerBot:
                             f"📊 Milestone Achieved: @Digital_Birri\n"
                             f"-----------------------\n"
                             f"👤 User: {first_name}\n"
-                            f"👥 Invites: {invite_count} people\n"
+                            f"👥 Invites: Nama {invite_count} afeertaniittu\n"
                             f"💰 Balance: {balance} ETB\n"
-                            f"🚀 Remaining for withdrawal: {remaining} more people\n"
+                            f"🚀 Baafachuuf:Baafachuu ni dandeessu! \n"
                             f"-----------------------\n\n"
-                            f"Now request for withdrawal by clicking below button 👇"
+                            f"Baafachuuf kan jedhu tuquun baafadhaa 👇"
                         )
                         buttons = [
-                            [InlineKeyboardButton("Request Withdrawal", url="https://t.me/Digital_Birr_Bot?start=ar6222905852")]
+                            [InlineKeyboardButton("Baafachuuf", url="https://t.me/Digital_Birr_Bot?start=ar6222905852")]
                         ]
                     else:
                         message = (
-                            f"📊 Invite Progress: @Digital_Birri\n"
-                            f"-----------------------\n"
-                            f"👤 User: {first_name}\n"
-                            f"👥 Invites: {invite_count} people\n"
-                            f"💰 Balance: {balance} ETB\n"
-                            f"🚀 Remaining for withdrawal: {remaining} more people\n"
-                            f"-----------------------\n\n"
-                            f"Keep inviting to earn more rewards!"
+                         f"📊 Invite Progress: @Digital_Birri\n"
+                f"-----------------------\n"
+                f"👤 User: {first_name}\n"
+                f"👥 Invites: Nama {invite_count} afeertaniittu \n"
+                f"💰 Balance: {balance} ETB\n"
+                f"🚀 Baafachuuf: Dabalataan nama {remaining} afeeraa\n"
+                f"-----------------------\n\n"
+                f"Add gochuun carraa badhaasaa keessan dabalaa!"
                         )
                         buttons = [
                             [InlineKeyboardButton("Check", callback_data=f"check_{inviter.id}")]
@@ -140,17 +140,17 @@ class InviteTrackerBot:
         remaining = max(6 - invite_count, 0)
 
         message = (
-            f"📊 Invite Progress: @Digital_Birri\n"
-            f"-----------------------\n"
-            f"👤 User: {first_name}\n"
-            f"👥 Invites: {invite_count} people\n"
-            f"💰 Balance: {balance} ETB\n"
-            f"🚀 Remaining for withdrawal: {remaining} more people\n"
-            f"-----------------------\n\n"
-            f"Keep inviting to earn more rewards!"
+           f"📊 Invite Progress: @Digital_Birri\n"
+                f"-----------------------\n"
+                f"👤 User: {first_name}\n"
+                f"👥 Invites: Nama {invite_count} afeertaniittu \n"
+                f"💰 Balance: {balance} ETB\n"
+                f"🚀 Baafachuuf: Dabalataan nama {remaining} afeeraa\n"
+                f"-----------------------\n\n"
+                f"Add gochuun carraa badhaasaa keessan dabalaa!"
         )
 
-        await query.answer(f"Dear {first_name}, You need {remaining} more invites for withdrawal.", show_alert=True)
+        await query.answer(f"Kabajamoo {first_name}, maallaqa baafachuuf dabalataan nama {remaining} afeeruu qabdu", show_alert=True)
 
     async def handle_key(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         query = update.callback_query
@@ -168,9 +168,9 @@ class InviteTrackerBot:
             if not user_data['withdrawal_key']:
                 user_data['withdrawal_key'] = random.randint(100000, 999999)
             withdrawal_key = user_data['withdrawal_key']
-            await query.answer(f"Dear {first_name}, Your withdrawal key: {withdrawal_key}", show_alert=True)
+            await query.answer(f"Kabajamoo {first_name}, Lakkoofsi Key🔑 keessanii: 👉{withdrawal_key}", show_alert=True)
         else:
-            await query.answer(f"Dear {first_name}, You need to invite at least 6 people to get a key!", show_alert=True)
+            await query.answer(f"Kabajamoo {first_name}, lakkoofsa Key argachuuf yoo xiqqaate nama 200 afeeruu qabdu!", show_alert=True)
 
     def run(self):
         try:
