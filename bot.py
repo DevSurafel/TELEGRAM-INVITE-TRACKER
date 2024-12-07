@@ -40,7 +40,7 @@ class InviteTrackerBot:
         ]
 
         if invite_count >= 6:
-            buttons.append([InlineKeyboardButton("Withdrawal Request", url="https://t.me/withdraw_bot")])
+            buttons.append([InlineKeyboardButton("Withdrawal Request", url="https://t.me/Digital_Birr_Bot")])
 
         # Send user's progress instead of the welcome message
         first_name = self.invite_counts[user.id]['first_name']
@@ -86,7 +86,7 @@ class InviteTrackerBot:
 
                     # Group message format
                     message = (
-                        f"📊 Invite Progress: \n"
+                        f"📊 Invite Progress: @Digital_Birri\n"
                         f"-----------------------\n"
                         f"👤 User: {first_name}\n"
                         f"👥 Invites: {invite_count} people\n"
@@ -99,7 +99,7 @@ class InviteTrackerBot:
                     # Add "Check" and "Request Withdrawal" buttons for group messages
                     buttons = [[InlineKeyboardButton("Check", callback_data=f"check_{inviter.id}")]]
                     if invite_count >= 6:
-                        buttons.append([InlineKeyboardButton("Request Withdrawal", url="https://t.me/withdraw_bot")])
+                        buttons.append([InlineKeyboardButton("Request Withdrawal", url="https://t.me/Digital_Birr_Bot")])
 
                     await update.message.reply_text(message, reply_markup=InlineKeyboardMarkup(buttons))
 
@@ -150,7 +150,7 @@ class InviteTrackerBot:
             withdrawal_key = user_data['withdrawal_key']
             await query.answer(f"Your withdrawal key: {withdrawal_key}", show_alert=True)
         else:
-            await query.answer("You need to invite more people to get a key!", show_alert=True)
+            await query.answer(" {firstname} You need to invite more people to get a key!", show_alert=True)
 
     def run(self):
         try:
