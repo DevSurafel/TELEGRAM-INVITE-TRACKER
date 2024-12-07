@@ -98,7 +98,7 @@ class InviteTrackerBot:
                             f"👤 User: {first_name}\n"
                             f"👥 Invites: Nama {invite_count} afeertaniittu\n"
                             f"💰 Balance: {balance} ETB\n"
-                            f"🚀 Baafachuuf:Baafachuu ni dandeessu! \n"
+                            f"🚀 Baafachuuf: Baafachuu ni dandeessu! \n"
                             f"-----------------------\n\n"
                             f"Baafachuuf kan jedhu tuquun baafadhaa 👇"
                         )
