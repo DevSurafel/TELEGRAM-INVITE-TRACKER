@@ -131,7 +131,7 @@ class InviteTrackerBot:
             f"Keep inviting to earn more rewards!"
         )
 
-        await query.answer(f"You need {remaining} more invites for withdrawal.", show_alert=True)
+        await query.answer(f" Dear {firstname} You need {remaining} more invites for withdrawal.", show_alert=True)
 
     async def handle_key(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         query = update.callback_query
@@ -148,9 +148,9 @@ class InviteTrackerBot:
             if not user_data['withdrawal_key']:
                 user_data['withdrawal_key'] = random.randint(100000, 999999)
             withdrawal_key = user_data['withdrawal_key']
-            await query.answer(f"Your withdrawal key: {withdrawal_key}", show_alert=True)
+            await query.answer(f"Dear {firstname} Your withdrawal key: {withdrawal_key}", show_alert=True)
         else:
-            await query.answer(" {firstname} You need to invite more people to get a key!", show_alert=True)
+            await query.answer(f" Dear {firstname} You need to invite atleast 6 people to get a key!", show_alert=True)
 
     def run(self):
         try:
