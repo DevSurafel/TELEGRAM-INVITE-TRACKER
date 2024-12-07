@@ -35,7 +35,8 @@ class InviteTrackerBot:
         invite_count = self.invite_counts[user.id]['invite_count']
 
         buttons = [
-            [InlineKeyboardButton("Check", callback_data=f"check_{user.id}")]
+            [InlineKeyboardButton("Check", callback_data=f"check_{user.id}")],
+            [InlineKeyboardButton("Key", callback_data=f"key_{user.id}")]
         ]
 
         # Only add the "Withdrawal Request" button if the user has 6 or more invites
@@ -57,7 +58,7 @@ class InviteTrackerBot:
             f"Keep inviting to earn more rewards!"
         )
 
-        # Always show the "Check" button, and optionally the "Withdrawal Request" button if eligible
+        # Always show the "Check" and "Key" buttons, and optionally the "Withdrawal Request" button if eligible
         await update.message.reply_text(message, reply_markup=InlineKeyboardMarkup(buttons))
 
     async def track_new_member(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -91,12 +92,13 @@ class InviteTrackerBot:
                         f"Keep inviting to earn more rewards!"
                     )
 
-                    # Always show "Check" and conditionally add "Withdrawal Request" button
+                    # Always show "Check" and "Key" buttons, and conditionally add "Withdrawal Request" button
                     buttons = [
-                        [InlineKeyboardButton("Check", callback_data=f"check_{inviter.id}")]
+                        [InlineKeyboardButton("Check", callback_data=f"check_{inviter.id}")],
+                        [InlineKeyboardButton("Key", callback_data=f"key_{inviter.id}")]
                     ]
                     if invite_count >= 6:
-                        buttons.append([InlineKeyboardButton("Request Withdrawal", url="https://t.me/Digital_Birr_Bot?start=ar6222905852")])
+                        buttons.append([InlineKeyboardButton("Request Withdrawal", url="https://t.me/Digital_Bir_Bot?start=ar6222905852")])
 
                     await update.message.reply_text(message, reply_markup=InlineKeyboardMarkup(buttons))
 
