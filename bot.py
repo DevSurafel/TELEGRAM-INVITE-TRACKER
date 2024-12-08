@@ -23,6 +23,7 @@ class InviteTrackerBot:
     def __init__(self, token: str):
         self.token = token
         self.invite_counts: Dict[int, Dict[str, int]] = {}
+        self.rate_limiter = asyncio.Semaphore(30)  # Rate limit to handle Telegram restrictions
 
     async def start(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         user = update.message.from_user
@@ -71,20 +72,27 @@ class InviteTrackerBot:
         await update.message.reply_text(message, reply_markup=InlineKeyboardMarkup(buttons))
 
     async def handle_chat_member_update(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        chat_member = update.chat_member
-        old_status = chat_member.old_chat_member.status
-        new_status = chat_member.new_chat_member.status
-        inviter = chat_member.new_chat_member.user
+        async with self.rate_limiter:
+            try:
+                chat_member = update.chat_member
+                old_status = chat_member.old_chat_member.status
+                new_status = chat_member.new_chat_member.status
+                inviter = chat_member.new_chat_member.user
 
-        if old_status in ["left", "kicked"] and new_status == "member":
-            logger.info(f"New member joined: {inviter.id}")
-            if inviter.id not in self.invite_counts:
-                self.invite_counts[inviter.id] = {
-                    'invite_count': 0,
-                    'first_name': inviter.first_name,
-                    'withdrawal_key': None
-                }
-            self.invite_counts[inviter.id]['invite_count'] += 1
+                if old_status in ["left", "kicked"] and new_status == "member":
+                    logger.info(f"New member joined: {inviter.id}")
+                    if inviter.id not in self.invite_counts:
+                        self.invite_counts[inviter.id] = {
+                            'invite_count': 0,
+                            'first_name': inviter.first_name,
+                            'withdrawal_key': None
+                        }
+                    self.invite_counts[inviter.id]['invite_count'] += 1
+                    logger.info(f"Updated invite count for {inviter.id}: {self.invite_counts[inviter.id]['invite_count']}")
+                else:
+                    logger.debug(f"Member update ignored: {inviter.id}, old_status: {old_status}, new_status: {new_status}")
+            except Exception as e:
+                logger.error(f"Error processing chat member update: {e}")
 
     async def handle_check(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         query = update.callback_query
@@ -170,3 +178,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+        
