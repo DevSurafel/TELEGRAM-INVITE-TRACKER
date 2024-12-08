@@ -107,6 +107,109 @@ class InviteTrackerBot:
             except Exception as e:
                 logger.error(f"Error tracking invite for {new_member.id}: {e}")
 
+    async def handle_check(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        query = update.callback_query
+        await query.answer("Checking invite progress...")
+        
+        if not query.data:
+            return
+
+        try:
+            user_id = int(query.data.split('_')[1])
+            if user_id not in self.invite_counts:
+                await query.answer("No invitation data found.")
+                return
+
+            user_data = self.invite_counts[user_id]
+            invite_count = user_data['invite_count']
+            first_name = user_data['first_name']
+            balance = invite_count * 50
+            remaining = max(200 - invite_count, 0)
+
+            message = (
+                f"📊 Invite Progress: @Digital_Birri\n"
+                f"-----------------------\n"
+                f"👤 User: {first_name}\n"
+                f"👥 Invites: {invite_count} successful\n"
+                f"💰 Balance: {balance} ETB\n"
+                f"🚀 Remaining: {remaining} more invites needed\n"
+                f"-----------------------"
+            )
+
+            await query.message.reply_text(message)
+
+        except Exception as e:
+            logger.error(f"Error in handle_check: {e}")
+
+    async def handle_key(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        query = update.callback_query
+        await query.answer("Generating withdrawal key...")
+        
+        if not query.data:
+            return
+
+        try:
+            user_id = int(query.data.split('_')[1])
+            if user_id not in self.invite_counts:
+                await query.answer("No invitation data found.")
+                return
+
+            user_data = self.invite_counts[user_id]
+            invite_count = user_data['invite_count']
+            first_name = user_data['first_name']
+
+            if invite_count >= 200:
+                if not user_data['withdrawal_key']:
+                    user_data['withdrawal_key'] = random.randint(100000, 999999)
+                withdrawal_key = user_data['withdrawal_key']
+                await query.answer(f"Key for {first_name}: {withdrawal_key}", show_alert=True)
+            else:
+                await query.answer(f"Need 200 invites to get a withdrawal key. Current invites: {invite_count}", show_alert=True)
+
+        except Exception as e:
+            logger.error(f"Error in handle_key: {e}")
+
+    # NEW: Added run method to start the bot
+    def run(self):
+        try:
+            # Create the Application and pass it your bot's token
+            application = Application.builder().token(self.token).build()
+
+            # Register handlers
+            application.add_handler(CommandHandler("start", self.start))
+            application.add_handler(MessageHandler(filters.StatusUpdate.NEW_CHAT_MEMBERS, self.track_new_member))
+            application.add_handler(CallbackQueryHandler(self.handle_check, pattern=r'^check_\d+$'))
+            application.add_handler(CallbackQueryHandler(self.handle_key, pattern=r'^key_\d+$'))
+
+            # Start the Bot
+            logger.info("Starting bot...")
+            
+            # Use run_polling for development, switched to asyncio for better compatibility
+            asyncio.run(application.run_polling(drop_pending_updates=True))
+
+        except Exception as e:
+            logger.error(f"Error running bot: {e}")
+
+    def _generate_progress_message(self, first_name, invite_count, balance, remaining):
+        if invite_count >= 200:
+            return (
+                f"🎉 <b>Milestone Achieved: @Digital_Birri</b>\n\n"
+                f"👤 User: {first_name}\n"
+                f"👥 Invites: {invite_count} successful\n"
+                f"💰 Balance: {balance} ETB\n"
+                f"🚀 Withdrawal: Now Available!\n\n"
+                f"Click Withdrawal Request to proceed"
+            )
+        else:
+            return (
+                f"📊 <b>Invite Progress: @Digital_Birri</b>\n"
+                f"👤 User: {first_name}\n"
+                f"👥 Invites: {invite_count} successful\n"
+                f"💰 Balance: {balance} ETB\n"
+                f"🚀 Goal: {remaining} more invites needed\n\n"
+                f"Keep inviting to reach your milestone!"
+            )
+
     async def _send_invite_progress(self, update: Update, inviter, invite_count):
         first_name = self.invite_counts[inviter.id]['first_name']
         balance = invite_count * 50
@@ -142,29 +245,6 @@ class InviteTrackerBot:
             )
         except Exception as e:
             logger.error(f"Could not send progress message: {e}")
-
-    def _generate_progress_message(self, first_name, invite_count, balance, remaining):
-        if invite_count >= 200:
-            return (
-                f"🎉 <b>Milestone Achieved: @Digital_Birri</b>\n\n"
-                f"👤 User: {first_name}\n"
-                f"👥 Invites: {invite_count} successful\n"
-                f"💰 Balance: {balance} ETB\n"
-                f"🚀 Withdrawal: Now Available!\n\n"
-                f"Click Withdrawal Request to proceed"
-            )
-        else:
-            return (
-                f"📊 <b>Invite Progress: @Digital_Birri</b>\n"
-                f"👤 User: {first_name}\n"
-                f"👥 Invites: {invite_count} successful\n"
-                f"💰 Balance: {balance} ETB\n"
-                f"🚀 Goal: {remaining} more invites needed\n\n"
-                f"Keep inviting to reach your milestone!"
-            )
-
-    # Rest of the methods (handle_check, handle_key, run) remain the same as in the original script
-    # ... (copy the previous implementation)
 
 def main():
     TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
