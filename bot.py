@@ -6,8 +6,7 @@ import asyncio
 from flask import Flask, request
 from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton, ChatMember
 from telegram.ext import (
-    Application, CommandHandler, MessageHandler,
-    CallbackQueryHandler, ContextTypes, filters, ChatMemberHandler
+    Application, CommandHandler, CallbackQueryHandler, ContextTypes, ChatMemberHandler
 )
 
 # Initialize Flask app
@@ -161,7 +160,7 @@ class InviteTrackerBot:
     def run(self):
         try:
             self.application.add_handler(CommandHandler("start", self.start))
-            self.application.add_handler(ChatMemberHandler(self.handle_chat_member_update))
+            self.application.add_handler(ChatMemberHandler(self.handle_chat_member_update, ChatMemberHandler.CHAT_MEMBER))
             self.application.add_handler(CallbackQueryHandler(self.handle_check, pattern=r'^check_\d+$'))
             self.application.add_handler(CallbackQueryHandler(self.handle_key, pattern=r'^key_\d+$'))
 
