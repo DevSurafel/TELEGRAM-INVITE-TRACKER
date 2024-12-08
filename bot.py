@@ -3,7 +3,7 @@ import logging
 import random
 from typing import Dict
 import asyncio
-from flask import Flask  # Added the import for Flask
+from flask import Flask, request
 from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton, ChatMember
 from telegram.ext import (
     Application, CommandHandler, MessageHandler,
@@ -24,9 +24,9 @@ class InviteTrackerBot:
         self.token = token
         self.invite_counts: Dict[int, Dict[str, int]] = {}
         self.rate_limiter = asyncio.Semaphore(30)  # Rate limit to handle Telegram restrictions
+        self.application = Application.builder().token(self.token).build()
 
     async def start(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        logger.info(f"Received /start command from user: {update.message.from_user.id}")
         user = update.message.from_user
         if user.id not in self.invite_counts:
             self.invite_counts[user.id] = {
@@ -80,8 +80,6 @@ class InviteTrackerBot:
                 new_status = chat_member.new_chat_member.status
                 inviter = chat_member.new_chat_member.user
 
-                logger.info(f"Chat member update: Old Status: {old_status}, New Status: {new_status}, User: {inviter.id}")
-
                 if old_status in ["left", "kicked"] and new_status == "member":
                     logger.info(f"New member joined: {inviter.id}")
                     if inviter.id not in self.invite_counts:
@@ -100,8 +98,6 @@ class InviteTrackerBot:
     async def handle_check(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         query = update.callback_query
         user_id = int(query.data.split('_')[1])
-
-        logger.info(f"Check button clicked by user: {user_id}")
 
         if user_id not in self.invite_counts:
             await query.answer("No invitation data found.")
@@ -130,8 +126,6 @@ class InviteTrackerBot:
         query = update.callback_query
         user_id = int(query.data.split('_')[1])
 
-        logger.info(f"Key button clicked by user: {user_id}")
-
         if user_id not in self.invite_counts:
             await query.answer("No invitation data found.")
             return
@@ -148,28 +142,43 @@ class InviteTrackerBot:
         else:
             await query.answer(f"Kabajamoo {first_name}, lakkoofsa Key argachuuf yoo xiqqaate nama 200 afeeruu qabdu!", show_alert=True)
 
+    async def set_webhook(self):
+        webhook_url = os.getenv('WEBHOOK_URL')
+        if not webhook_url:
+            logger.error("No webhook URL provided. Set WEBHOOK_URL environment variable.")
+            return
+
+        await self.application.bot.set_webhook(webhook_url)
+        logger.info(f"Webhook set to: {webhook_url}")
+
     def run(self):
         try:
-            application = Application.builder().token(self.token).build()
-
-            application.add_handler(CommandHandler("start", self.start))
-            application.add_handler(ChatMemberHandler(self.handle_chat_member_update))
-            application.add_handler(CallbackQueryHandler(self.handle_check, pattern=r'^check_\d+$'))
-            application.add_handler(CallbackQueryHandler(self.handle_key, pattern=r'^key_\d+$'))
+            self.application.add_handler(CommandHandler("start", self.start))
+            self.application.add_handler(ChatMemberHandler(self.handle_chat_member_update))
+            self.application.add_handler(CallbackQueryHandler(self.handle_check, pattern=r'^check_\d+$'))
+            self.application.add_handler(CallbackQueryHandler(self.handle_key, pattern=r'^key_\d+$'))
 
             logger.info("Bot started successfully!")
-            asyncio.get_event_loop().run_until_complete(application.run_polling(drop_pending_updates=True))
+            asyncio.get_event_loop().run_until_complete(self.application.run_polling(drop_pending_updates=True))
 
         except Exception as e:
             logger.error(f"Failed to start bot: {e}")
 
 # Web server to keep the service running on Render
+@app.route('/webhook', methods=['POST'])
+def webhook():
+    update = Update.de_json(request.get_json(force=True), bot.application.bot)
+    bot.application.update_queue.put(update)
+    return "ok"
+
 @app.route('/')
 def index():
     return "Bot is running!"
 
 def main():
     TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
+    WEBHOOK_URL = os.getenv('WEBHOOK_URL')  # Make sure to set this environment variable
+
     if not TOKEN:
         logger.error("No bot token provided. Set TELEGRAM_BOT_TOKEN environment variable.")
         return
@@ -179,10 +188,10 @@ def main():
     # Run the bot and the Flask app in the same event loop
     loop = asyncio.get_event_loop()
     loop.create_task(bot.run())  # Start the bot as a background task
+    loop.create_task(bot.set_webhook())  # Set the webhook
 
     # Start the Flask app (it will run in the main thread)
     app.run(host='0.0.0.0', port=int(os.getenv('PORT', 5000)))
 
 if __name__ == "__main__":
     main()
-                
