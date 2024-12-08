@@ -3,15 +3,11 @@ import logging
 import random
 from typing import Dict
 import asyncio
-from flask import Flask
 from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton
 from telegram.ext import (
     Application, CommandHandler, MessageHandler,
     CallbackQueryHandler, filters, ContextTypes
 )
-
-# Initialize Flask app
-app = Flask(__name__)
 
 # Configure logging
 logging.basicConfig(
@@ -74,7 +70,6 @@ class InviteTrackerBot:
         await update.message.reply_text(message, reply_markup=InlineKeyboardMarkup(buttons))
 
     async def track_new_member(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        # Check if the message comes from the specified group
         if update.message.chat.id != self.group_id:
             return
 
@@ -148,14 +143,14 @@ class InviteTrackerBot:
         remaining = max(200 - invite_count, 0)
 
         message = (
-           f"📊 Invite Progress: @Digital_Birri\n"
-                f"-----------------------\n"
-                f"👤 User: {first_name}\n"
-                f"👥 Invites: Nama {invite_count} afeertaniittu \n"
-                f"💰 Balance: {balance} ETB\n"
-                f"🚀 Baafachuuf: Dabalataan nama {remaining} afeeraa\n"
-                f"-----------------------\n\n"
-                f"Add gochuun carraa badhaasaa keessan dabalaa!"
+            f"📊 Invite Progress: @Digital_Birri\n"
+            f"-----------------------\n"
+            f"👤 User: {first_name}\n"
+            f"👥 Invites: Nama {invite_count} afeertaniittu \n"
+            f"💰 Balance: {balance} ETB\n"
+            f"🚀 Baafachuuf: Dabalataan nama {remaining} afeeraa\n"
+            f"-----------------------\n\n"
+            f"Add gochuun carraa badhaasaa keessan dabalaa!"
         )
 
         await query.answer(f"Kabajamoo {first_name}, maallaqa baafachuuf dabalataan nama {remaining} afeeruu qabdu", show_alert=True)
@@ -197,11 +192,6 @@ class InviteTrackerBot:
         except Exception as e:
             logger.error(f"Failed to start bot: {e}")
 
-# Web server to keep the service running
-@app.route('/')
-def index():
-    return "Bot is running!"
-
 def main():
     TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
     if not TOKEN:
@@ -209,13 +199,7 @@ def main():
         return
 
     bot = InviteTrackerBot(TOKEN)
-
-    # Run the bot and the Flask app in the same event loop
-    loop = asyncio.get_event_loop()
-    loop.create_task(bot.run())  # Start the bot as a background task
-
-    # Start the Flask app (it will run in the main thread)
-    app.run(host='0.0.0.0', port=int(os.getenv('PORT', 5000)))
+    bot.run()
 
 if __name__ == "__main__":
     main()
