@@ -24,6 +24,7 @@ class InviteTrackerBot:
         self.invite_counts: Dict[int, Dict[str, int]] = {}
         self.rate_limiter = asyncio.Semaphore(30)  # Rate limit to handle Telegram restrictions
         self.application = Application.builder().token(self.token).build()
+        self.first_deployment = True
 
     async def start(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         logger.info(f"Received /start command from user: {update.message.from_user.id}")
@@ -148,6 +149,14 @@ class InviteTrackerBot:
         else:
             await query.answer(f"Kabajamoo {first_name}, lakkoofsa Key argachuuf yoo xiqqaate nama 200 afeeruu qabdu!", show_alert=True)
 
+    async def send_hello_message(self, chat_id):
+        message = "Hello Everyone!"
+        try:
+            await self.application.bot.send_message(chat_id=chat_id, text=message)
+            logger.info("Sent hello message to the group.")
+        except Exception as e:
+            logger.error(f"Failed to send hello message: {e}")
+
     async def set_webhook(self):
         webhook_url = os.getenv('WEBHOOK_URL')
         if not webhook_url:
@@ -157,15 +166,21 @@ class InviteTrackerBot:
         await self.application.bot.set_webhook(webhook_url)
         logger.info(f"Webhook set to: {webhook_url}")
 
-    def run(self):
+    async def start_bot(self):
         try:
             self.application.add_handler(CommandHandler("start", self.start))
             self.application.add_handler(ChatMemberHandler(self.handle_chat_member_update, ChatMemberHandler.CHAT_MEMBER))
             self.application.add_handler(CallbackQueryHandler(self.handle_check, pattern=r'^check_\d+$'))
             self.application.add_handler(CallbackQueryHandler(self.handle_key, pattern=r'^key_\d+$'))
 
+            if self.first_deployment:
+                # Send "Hello Everyone" message on the first deployment
+                chat_id = YOUR_GROUP_CHAT_ID  # Replace with your group chat ID
+                await self.send_hello_message(chat_id)
+                self.first_deployment = False
+
             logger.info("Bot started successfully!")
-            asyncio.get_event_loop().run_until_complete(self.application.run_polling(drop_pending_updates=True))
+            await self.application.run_polling(drop_pending_updates=True)
 
         except Exception as e:
             logger.error(f"Failed to start bot: {e}")
@@ -193,7 +208,7 @@ def main():
 
     # Run the bot and the Flask app in the same event loop
     loop = asyncio.get_event_loop()
-    loop.create_task(bot.run())  # Start the bot as a background task
+    loop.create_task(bot.start_bot())  # Start the bot as a background task
     loop.create_task(bot.set_webhook())  # Set the webhook
 
     # Start the Flask app (it will run in the main thread)
