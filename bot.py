@@ -13,7 +13,6 @@ from telegram.ext import (
 # Initialize Flask app
 app = Flask(__name__)
 
-# Configure logging
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     level=logging.INFO,
@@ -24,11 +23,9 @@ class InviteTrackerBot:
     def __init__(self, token: str):
         self.token = token
         self.invite_counts: Dict[int, Dict[str, int]] = {}
-        self.group_id = int(os.getenv("TELEGRAM_GROUP_ID"))  # Get the group ID to operate in
 
     async def start(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         user = update.message.from_user
-        # Initialize user data
         if user.id not in self.invite_counts:
             self.invite_counts[user.id] = {
                 'invite_count': 0,
@@ -74,10 +71,6 @@ class InviteTrackerBot:
         await update.message.reply_text(message, reply_markup=InlineKeyboardMarkup(buttons))
 
     async def track_new_member(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        # Check if the message comes from the specified group
-        if update.message.chat.id != self.group_id:
-            return
-
         for new_member in update.message.new_chat_members:
             try:
                 inviter = update.message.from_user
@@ -89,11 +82,10 @@ class InviteTrackerBot:
                         'first_name': inviter.first_name,
                         'withdrawal_key': None
                     }
-                # Increment the invite count
                 self.invite_counts[inviter.id]['invite_count'] += 1
                 invite_count = self.invite_counts[inviter.id]['invite_count']
 
-                if invite_count % 10 == 0:  # Notify every 10 invites
+                if invite_count % 10 == 0:
                     first_name = self.invite_counts[inviter.id]['first_name']
                     balance = invite_count * 50
                     remaining = max(200 - invite_count, 0)
@@ -115,14 +107,14 @@ class InviteTrackerBot:
                         ]
                     else:
                         message = (
-                            f"📊 Invite Progress: @Digital_Birri\n"
-                            f"-----------------------\n"
-                            f"👤 User: {first_name}\n"
-                            f"👥 Invites: Nama {invite_count} afeertaniittu \n"
-                            f"💰 Balance: {balance} ETB\n"
-                            f"🚀 Baafachuuf: Dabalataan nama {remaining} afeeraa\n"
-                            f"-----------------------\n\n"
-                            f"Add gochuun carraa badhaasaa keessan dabalaa!"
+                         f"📊 Invite Progress: @Digital_Birri\n"
+                f"-----------------------\n"
+                f"👤 User: {first_name}\n"
+                f"👥 Invites: Nama {invite_count} afeertaniittu \n"
+                f"💰 Balance: {balance} ETB\n"
+                f"🚀 Baafachuuf: Dabalataan nama {remaining} afeeraa\n"
+                f"-----------------------\n\n"
+                f"Add gochuun carraa badhaasaa keessan dabalaa!"
                         )
                         buttons = [
                             [InlineKeyboardButton("Check", callback_data=f"check_{inviter.id}")]
@@ -191,13 +183,13 @@ class InviteTrackerBot:
 
             logger.info("Bot started successfully!")
 
-            # Run the bot asynchronously
+            # Run the bot asynchronously, using asyncio.run() in a blocking way
             asyncio.get_event_loop().run_until_complete(application.run_polling(drop_pending_updates=True))
 
         except Exception as e:
             logger.error(f"Failed to start bot: {e}")
 
-# Web server to keep the service running
+# Web server to keep the service running on Render
 @app.route('/')
 def index():
     return "Bot is running!"
