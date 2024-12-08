@@ -26,6 +26,7 @@ class InviteTrackerBot:
         self.rate_limiter = asyncio.Semaphore(30)  # Rate limit to handle Telegram restrictions
 
     async def start(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        logger.info(f"Received /start command from user: {update.message.from_user.id}")
         user = update.message.from_user
         if user.id not in self.invite_counts:
             self.invite_counts[user.id] = {
@@ -79,6 +80,8 @@ class InviteTrackerBot:
                 new_status = chat_member.new_chat_member.status
                 inviter = chat_member.new_chat_member.user
 
+                logger.info(f"Chat member update: Old Status: {old_status}, New Status: {new_status}, User: {inviter.id}")
+
                 if old_status in ["left", "kicked"] and new_status == "member":
                     logger.info(f"New member joined: {inviter.id}")
                     if inviter.id not in self.invite_counts:
@@ -97,6 +100,8 @@ class InviteTrackerBot:
     async def handle_check(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         query = update.callback_query
         user_id = int(query.data.split('_')[1])
+
+        logger.info(f"Check button clicked by user: {user_id}")
 
         if user_id not in self.invite_counts:
             await query.answer("No invitation data found.")
@@ -124,6 +129,8 @@ class InviteTrackerBot:
     async def handle_key(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         query = update.callback_query
         user_id = int(query.data.split('_')[1])
+
+        logger.info(f"Key button clicked by user: {user_id}")
 
         if user_id not in self.invite_counts:
             await query.answer("No invitation data found.")
@@ -178,4 +185,4 @@ def main():
 
 if __name__ == "__main__":
     main()
-        
+                
