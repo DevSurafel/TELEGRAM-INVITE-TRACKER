@@ -1,8 +1,8 @@
 import os
 import logging
 import random
-from typing import Dict
 import asyncio
+from typing import Dict
 from flask import Flask
 from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton
 from telegram.ext import (
@@ -10,7 +10,7 @@ from telegram.ext import (
     CallbackQueryHandler, filters, ContextTypes
 )
 
-# Initialize Flask app
+# Initialize Flask app to keep the bot alive on platforms like Railway
 app = Flask(__name__)
 
 logging.basicConfig(
@@ -107,14 +107,14 @@ class InviteTrackerBot:
                         ]
                     else:
                         message = (
-                         f"📊 Invite Progress: @Digital_Birri\n"
-                f"-----------------------\n"
-                f"👤 User: {first_name}\n"
-                f"👥 Invites: Nama {invite_count} afeertaniittu \n"
-                f"💰 Balance: {balance} ETB\n"
-                f"🚀 Baafachuuf: Dabalataan nama {remaining} afeeraa\n"
-                f"-----------------------\n\n"
-                f"Add gochuun carraa badhaasaa keessan dabalaa!"
+                            f"📊 Invite Progress: @Digital_Birri\n"
+                            f"-----------------------\n"
+                            f"👤 User: {first_name}\n"
+                            f"👥 Invites: Nama {invite_count} afeertaniittu \n"
+                            f"💰 Balance: {balance} ETB\n"
+                            f"🚀 Baafachuuf: Dabalataan nama {remaining} afeeraa\n"
+                            f"-----------------------\n\n"
+                            f"Add gochuun carraa badhaasaa keessan dabalaa!"
                         )
                         buttons = [
                             [InlineKeyboardButton("Check", callback_data=f"check_{inviter.id}")]
@@ -141,13 +141,13 @@ class InviteTrackerBot:
 
         message = (
            f"📊 Invite Progress: @Digital_Birri\n"
-                f"-----------------------\n"
-                f"👤 User: {first_name}\n"
-                f"👥 Invites: Nama {invite_count} afeertaniittu \n"
-                f"💰 Balance: {balance} ETB\n"
-                f"🚀 Baafachuuf: Dabalataan nama {remaining} afeeraa\n"
-                f"-----------------------\n\n"
-                f"Add gochuun carraa badhaasaa keessan dabalaa!"
+            f"-----------------------\n"
+            f"👤 User: {first_name}\n"
+            f"👥 Invites: Nama {invite_count} afeertaniittu \n"
+            f"💰 Balance: {balance} ETB\n"
+            f"🚀 Baafachuuf: Dabalataan nama {remaining} afeeraa\n"
+            f"-----------------------\n\n"
+            f"Add gochuun carraa badhaasaa keessan dabalaa!"
         )
 
         await query.answer(f"Kabajamoo {first_name}, maallaqa baafachuuf dabalataan nama {remaining} afeeruu qabdu", show_alert=True)
@@ -183,13 +183,13 @@ class InviteTrackerBot:
 
             logger.info("Bot started successfully!")
 
-            # Run the bot asynchronously, using asyncio.run() in a blocking way
+            # Run the bot asynchronously
             asyncio.get_event_loop().run_until_complete(application.run_polling(drop_pending_updates=True))
 
         except Exception as e:
             logger.error(f"Failed to start bot: {e}")
 
-# Web server to keep the service running on Render
+# Web server to keep the service running (e.g., on Railway)
 @app.route('/')
 def index():
     return "Bot is running!"
