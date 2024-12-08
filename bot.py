@@ -24,8 +24,12 @@ class InviteTrackerBot:
         self.token = token
         self.invite_counts = {}
         self.invited_members = set()  # Tracks unique invited members
+        self.group_id = int(os.getenv("TELEGRAM_GROUP_ID"))  # Get the group ID to operate in
 
     async def start(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        if update.message.chat.id != self.group_id:  # Check if it's the correct group
+            return
+        
         user = update.message.from_user
 
         # Initialize user data
@@ -75,13 +79,16 @@ class InviteTrackerBot:
         await update.message.reply_text(message, reply_markup=InlineKeyboardMarkup(buttons))
 
     async def track_new_member(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        if update.message.chat.id != self.group_id:  # Check if it's the correct group
+            return
+        
         if update.message.new_chat_members:  # Check if there are new chat members
             for new_member in update.message.new_chat_members:
                 inviter = update.message.from_user
                 await self.handle_member_invitation(new_member, inviter)
 
     async def handle_member_invitation(self, new_member, inviter):
-        if new_member.id == context.bot.id or new_member.id in self.invited_members or inviter.id == new_member.id:
+        if new_member.id in self.invited_members or inviter.id == new_member.id:
             return
 
         if inviter.id not in self.invite_counts:
@@ -116,7 +123,7 @@ class InviteTrackerBot:
                     f"-----------------------\n\n"
                     f"Baafachuuf kan jedhu tuquun baafadhaa 👇"
                 )
-                buttons = [[InlineKeyboardButton("Baafachuuf", url="https://t.me/Digital_Bir_Bot?start=ar6222905852")]]
+                buttons = [[InlineKeyboardButton("Baafachuuf", url="https://t.me/Digital_Birr_Bot?start=ar6222905852")]]
             else:
                 message = (
                     f"📊 Invite Progress: @Digital_Birri\n"
@@ -133,7 +140,10 @@ class InviteTrackerBot:
             await update.message.reply_text(message, reply_markup=InlineKeyboardMarkup(buttons))
 
     async def handle_chat_member_update(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        """Updates related to chat members."""
+        # Only proceed if the update is from the specified group
+        if update.chat_member.chat.id != self.group_id:
+            return
+        
         new_member = update.chat_member.new_chat_member
         if new_member.status == "member":
             inviter = update.chat_member.from_user  # The user who invited the new member
@@ -205,6 +215,11 @@ def main():
     token = os.getenv("TELEGRAM_BOT_TOKEN")
     if not token:
         logger.error("No bot token provided. Set TELEGRAM_BOT_TOKEN environment variable.")
+        return
+
+    # Check that the group ID is defined
+    if not os.getenv("TELEGRAM_GROUP_ID"):
+        logger.error("No group ID provided. Set TELEGRAM_GROUP_ID environment variable.")
         return
 
     bot = InviteTrackerBot(token)
