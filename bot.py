@@ -1,16 +1,16 @@
 import os
 import logging
 import random
-import asyncio
 from typing import Dict
+import asyncio
 from flask import Flask
-from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton
+from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton, ChatMember
 from telegram.ext import (
     Application, CommandHandler, MessageHandler,
-    CallbackQueryHandler, filters, ContextTypes
+    CallbackQueryHandler, ContextTypes, filters, ChatMemberHandler
 )
 
-# Initialize Flask app to keep the bot alive on platforms like Railway
+# Initialize Flask app
 app = Flask(__name__)
 
 logging.basicConfig(
@@ -70,60 +70,21 @@ class InviteTrackerBot:
 
         await update.message.reply_text(message, reply_markup=InlineKeyboardMarkup(buttons))
 
-    async def track_new_member(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        for new_member in update.message.new_chat_members:
-            try:
-                inviter = update.message.from_user
-                if inviter.id == new_member.id:
-                    continue
-                if inviter.id not in self.invite_counts:
-                    self.invite_counts[inviter.id] = {
-                        'invite_count': 0,
-                        'first_name': inviter.first_name,
-                        'withdrawal_key': None
-                    }
-                self.invite_counts[inviter.id]['invite_count'] += 1
-                invite_count = self.invite_counts[inviter.id]['invite_count']
+    async def handle_chat_member_update(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        chat_member = update.chat_member
+        old_status = chat_member.old_chat_member.status
+        new_status = chat_member.new_chat_member.status
+        inviter = chat_member.new_chat_member.user
 
-                if invite_count % 10 == 0:
-                    first_name = self.invite_counts[inviter.id]['first_name']
-                    balance = invite_count * 50
-                    remaining = max(200 - invite_count, 0)
-
-                    if invite_count >= 200:
-                        message = (
-                            f"Congratulations 👏👏🎉\n\n"
-                            f"📊 Milestone Achieved: @Digital_Birri\n"
-                            f"-----------------------\n"
-                            f"👤 User: {first_name}\n"
-                            f"👥 Invites: Nama {invite_count} afeertaniittu\n"
-                            f"💰 Balance: {balance} ETB\n"
-                            f"🚀 Baafachuuf: Baafachuu ni dandeessu! \n"
-                            f"-----------------------\n\n"
-                            f"Baafachuuf kan jedhu tuquun baafadhaa 👇"
-                        )
-                        buttons = [
-                            [InlineKeyboardButton("Baafachuuf", url="https://t.me/Digital_Birr_Bot?start=ar6222905852")]
-                        ]
-                    else:
-                        message = (
-                            f"📊 Invite Progress: @Digital_Birri\n"
-                            f"-----------------------\n"
-                            f"👤 User: {first_name}\n"
-                            f"👥 Invites: Nama {invite_count} afeertaniittu \n"
-                            f"💰 Balance: {balance} ETB\n"
-                            f"🚀 Baafachuuf: Dabalataan nama {remaining} afeeraa\n"
-                            f"-----------------------\n\n"
-                            f"Add gochuun carraa badhaasaa keessan dabalaa!"
-                        )
-                        buttons = [
-                            [InlineKeyboardButton("Check", callback_data=f"check_{inviter.id}")]
-                        ]
-
-                    await update.message.reply_text(message, reply_markup=InlineKeyboardMarkup(buttons))
-
-            except Exception as e:
-                logger.error(f"Error tracking invite: {e}")
+        if old_status in ["left", "kicked"] and new_status == "member":
+            logger.info(f"New member joined: {inviter.id}")
+            if inviter.id not in self.invite_counts:
+                self.invite_counts[inviter.id] = {
+                    'invite_count': 0,
+                    'first_name': inviter.first_name,
+                    'withdrawal_key': None
+                }
+            self.invite_counts[inviter.id]['invite_count'] += 1
 
     async def handle_check(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         query = update.callback_query
@@ -140,7 +101,7 @@ class InviteTrackerBot:
         remaining = max(200 - invite_count, 0)
 
         message = (
-           f"📊 Invite Progress: @Digital_Birri\n"
+            f"📊 Invite Progress: @Digital_Birri\n"
             f"-----------------------\n"
             f"👤 User: {first_name}\n"
             f"👥 Invites: Nama {invite_count} afeertaniittu \n"
@@ -177,19 +138,17 @@ class InviteTrackerBot:
             application = Application.builder().token(self.token).build()
 
             application.add_handler(CommandHandler("start", self.start))
-            application.add_handler(MessageHandler(filters.StatusUpdate.NEW_CHAT_MEMBERS, self.track_new_member))
+            application.add_handler(ChatMemberHandler(self.handle_chat_member_update))
             application.add_handler(CallbackQueryHandler(self.handle_check, pattern=r'^check_\d+$'))
             application.add_handler(CallbackQueryHandler(self.handle_key, pattern=r'^key_\d+$'))
 
             logger.info("Bot started successfully!")
-
-            # Run the bot asynchronously
             asyncio.get_event_loop().run_until_complete(application.run_polling(drop_pending_updates=True))
 
         except Exception as e:
             logger.error(f"Failed to start bot: {e}")
 
-# Web server to keep the service running (e.g., on Railway)
+# Web server to keep the service running on Render
 @app.route('/')
 def index():
     return "Bot is running!"
