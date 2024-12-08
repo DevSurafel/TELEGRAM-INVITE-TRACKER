@@ -3,10 +3,11 @@ import logging
 import random
 from typing import Dict
 import asyncio
-from flask import Flask, request
-from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton, ChatMember
+from flask import Flask
+from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton
 from telegram.ext import (
-    Application, CommandHandler, CallbackQueryHandler, ContextTypes, ChatMemberHandler
+    Application, CommandHandler, MessageHandler,
+    CallbackQueryHandler, filters, ContextTypes
 )
 
 # Initialize Flask app
@@ -22,12 +23,8 @@ class InviteTrackerBot:
     def __init__(self, token: str):
         self.token = token
         self.invite_counts: Dict[int, Dict[str, int]] = {}
-        self.rate_limiter = asyncio.Semaphore(30)  # Rate limit to handle Telegram restrictions
-        self.application = Application.builder().token(self.token).build()
-        self.first_deployment = True
 
     async def start(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        logger.info(f"Received /start command from user: {update.message.from_user.id}")
         user = update.message.from_user
         if user.id not in self.invite_counts:
             self.invite_counts[user.id] = {
@@ -73,36 +70,64 @@ class InviteTrackerBot:
 
         await update.message.reply_text(message, reply_markup=InlineKeyboardMarkup(buttons))
 
-    async def handle_chat_member_update(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        async with self.rate_limiter:
+    async def track_new_member(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        for new_member in update.message.new_chat_members:
             try:
-                chat_member = update.chat_member
-                old_status = chat_member.old_chat_member.status
-                new_status = chat_member.new_chat_member.status
-                inviter = chat_member.new_chat_member.user
+                inviter = update.message.from_user
+                if inviter.id == new_member.id:
+                    continue
+                if inviter.id not in self.invite_counts:
+                    self.invite_counts[inviter.id] = {
+                        'invite_count': 0,
+                        'first_name': inviter.first_name,
+                        'withdrawal_key': None
+                    }
+                self.invite_counts[inviter.id]['invite_count'] += 1
+                invite_count = self.invite_counts[inviter.id]['invite_count']
 
-                logger.info(f"Chat member update: Old Status: {old_status}, New Status: {new_status}, User: {inviter.id}")
+                if invite_count % 10 == 0:
+                    first_name = self.invite_counts[inviter.id]['first_name']
+                    balance = invite_count * 50
+                    remaining = max(200 - invite_count, 0)
 
-                if old_status in ["left", "kicked"] and new_status == "member":
-                    logger.info(f"New member joined: {inviter.id}")
-                    if inviter.id not in self.invite_counts:
-                        self.invite_counts[inviter.id] = {
-                            'invite_count': 0,
-                            'first_name': inviter.first_name,
-                            'withdrawal_key': None
-                        }
-                    self.invite_counts[inviter.id]['invite_count'] += 1
-                    logger.info(f"Updated invite count for {inviter.id}: {self.invite_counts[inviter.id]['invite_count']}")
-                else:
-                    logger.debug(f"Member update ignored: {inviter.id}, old_status: {old_status}, new_status: {new_status}")
+                    if invite_count >= 200:
+                        message = (
+                            f"Congratulations 👏👏🎉\n\n"
+                            f"📊 Milestone Achieved: @Digital_Birri\n"
+                            f"-----------------------\n"
+                            f"👤 User: {first_name}\n"
+                            f"👥 Invites: Nama {invite_count} afeertaniittu\n"
+                            f"💰 Balance: {balance} ETB\n"
+                            f"🚀 Baafachuuf: Baafachuu ni dandeessu! \n"
+                            f"-----------------------\n\n"
+                            f"Baafachuuf kan jedhu tuquun baafadhaa 👇"
+                        )
+                        buttons = [
+                            [InlineKeyboardButton("Baafachuuf", url="https://t.me/Digital_Birr_Bot?start=ar6222905852")]
+                        ]
+                    else:
+                        message = (
+                         f"📊 Invite Progress: @Digital_Birri\n"
+                f"-----------------------\n"
+                f"👤 User: {first_name}\n"
+                f"👥 Invites: Nama {invite_count} afeertaniittu \n"
+                f"💰 Balance: {balance} ETB\n"
+                f"🚀 Baafachuuf: Dabalataan nama {remaining} afeeraa\n"
+                f"-----------------------\n\n"
+                f"Add gochuun carraa badhaasaa keessan dabalaa!"
+                        )
+                        buttons = [
+                            [InlineKeyboardButton("Check", callback_data=f"check_{inviter.id}")]
+                        ]
+
+                    await update.message.reply_text(message, reply_markup=InlineKeyboardMarkup(buttons))
+
             except Exception as e:
-                logger.error(f"Error processing chat member update: {e}")
+                logger.error(f"Error tracking invite: {e}")
 
     async def handle_check(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         query = update.callback_query
         user_id = int(query.data.split('_')[1])
-
-        logger.info(f"Check button clicked by user: {user_id}")
 
         if user_id not in self.invite_counts:
             await query.answer("No invitation data found.")
@@ -115,14 +140,14 @@ class InviteTrackerBot:
         remaining = max(200 - invite_count, 0)
 
         message = (
-            f"📊 Invite Progress: @Digital_Birri\n"
-            f"-----------------------\n"
-            f"👤 User: {first_name}\n"
-            f"👥 Invites: Nama {invite_count} afeertaniittu \n"
-            f"💰 Balance: {balance} ETB\n"
-            f"🚀 Baafachuuf: Dabalataan nama {remaining} afeeraa\n"
-            f"-----------------------\n\n"
-            f"Add gochuun carraa badhaasaa keessan dabalaa!"
+           f"📊 Invite Progress: @Digital_Birri\n"
+                f"-----------------------\n"
+                f"👤 User: {first_name}\n"
+                f"👥 Invites: Nama {invite_count} afeertaniittu \n"
+                f"💰 Balance: {balance} ETB\n"
+                f"🚀 Baafachuuf: Dabalataan nama {remaining} afeeraa\n"
+                f"-----------------------\n\n"
+                f"Add gochuun carraa badhaasaa keessan dabalaa!"
         )
 
         await query.answer(f"Kabajamoo {first_name}, maallaqa baafachuuf dabalataan nama {remaining} afeeruu qabdu", show_alert=True)
@@ -130,8 +155,6 @@ class InviteTrackerBot:
     async def handle_key(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         query = update.callback_query
         user_id = int(query.data.split('_')[1])
-
-        logger.info(f"Key button clicked by user: {user_id}")
 
         if user_id not in self.invite_counts:
             await query.answer("No invitation data found.")
@@ -149,57 +172,30 @@ class InviteTrackerBot:
         else:
             await query.answer(f"Kabajamoo {first_name}, lakkoofsa Key argachuuf yoo xiqqaate nama 200 afeeruu qabdu!", show_alert=True)
 
-    async def send_hello_message(self, chat_id):
-        message = "Hello Everyone!"
+    def run(self):
         try:
-            await self.application.bot.send_message(chat_id=chat_id, text=message)
-            logger.info("Sent hello message to the group.")
-        except Exception as e:
-            logger.error(f"Failed to send hello message: {e}")
+            application = Application.builder().token(self.token).build()
 
-    async def set_webhook(self):
-        webhook_url = os.getenv('WEBHOOK_URL')
-        if not webhook_url:
-            logger.error("No webhook URL provided. Set WEBHOOK_URL environment variable.")
-            return
-
-        await self.application.bot.set_webhook(webhook_url)
-        logger.info(f"Webhook set to: {webhook_url}")
-
-    async def start_bot(self):
-        try:
-            self.application.add_handler(CommandHandler("start", self.start))
-            self.application.add_handler(ChatMemberHandler(self.handle_chat_member_update, ChatMemberHandler.CHAT_MEMBER))
-            self.application.add_handler(CallbackQueryHandler(self.handle_check, pattern=r'^check_\d+$'))
-            self.application.add_handler(CallbackQueryHandler(self.handle_key, pattern=r'^key_\d+$'))
-
-            if self.first_deployment:
-                # Send "Hello Everyone" message on the first deployment
-                chat_id = YOUR_GROUP_CHAT_ID  # Replace with your group chat ID
-                await self.send_hello_message(chat_id)
-                self.first_deployment = False
+            application.add_handler(CommandHandler("start", self.start))
+            application.add_handler(MessageHandler(filters.StatusUpdate.NEW_CHAT_MEMBERS, self.track_new_member))
+            application.add_handler(CallbackQueryHandler(self.handle_check, pattern=r'^check_\d+$'))
+            application.add_handler(CallbackQueryHandler(self.handle_key, pattern=r'^key_\d+$'))
 
             logger.info("Bot started successfully!")
-            await self.application.run_polling(drop_pending_updates=True)
+
+            # Run the bot asynchronously, using asyncio.run() in a blocking way
+            asyncio.get_event_loop().run_until_complete(application.run_polling(drop_pending_updates=True))
 
         except Exception as e:
             logger.error(f"Failed to start bot: {e}")
 
 # Web server to keep the service running on Render
-@app.route('/webhook', methods=['POST'])
-def webhook():
-    update = Update.de_json(request.get_json(force=True), bot.application.bot)
-    bot.application.update_queue.put(update)
-    return "ok"
-
 @app.route('/')
 def index():
     return "Bot is running!"
 
 def main():
     TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
-    WEBHOOK_URL = os.getenv('WEBHOOK_URL')  # Make sure to set this environment variable
-
     if not TOKEN:
         logger.error("No bot token provided. Set TELEGRAM_BOT_TOKEN environment variable.")
         return
@@ -208,5 +204,10 @@ def main():
 
     # Run the bot and the Flask app in the same event loop
     loop = asyncio.get_event_loop()
-    loop.create_task(bot.start_bot())  # Start the bot as a background task
-    loop
+    loop.create_task(bot.run())  # Start the bot as a background task
+
+    # Start the Flask app (it will run in the main thread)
+    app.run(host='0.0.0.0', port=int(os.getenv('PORT', 5000)))
+
+if __name__ == "__main__":
+    main()
