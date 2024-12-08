@@ -3,6 +3,7 @@ import logging
 import random
 from typing import Dict
 import asyncio
+from flask import Flask  # Added the import for Flask
 from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton, ChatMember
 from telegram.ext import (
     Application, CommandHandler, MessageHandler,
@@ -177,3 +178,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+        
