@@ -1,4 +1,3 @@
-
 import os
 import logging
 import random
@@ -74,6 +73,8 @@ class InviteTrackerBot:
         if update.message.chat.id != self.group_id:
             return
 
+        logger.info(f"New member joined: {update.message.new_chat_members}")
+        
         for new_member in update.message.new_chat_members:
             try:
                 inviter = update.message.from_user
