@@ -173,7 +173,7 @@ class InviteTrackerBot:
             application.add_handler(CallbackQueryHandler(self.handle_check, pattern=r"^check_\d+$"))
             application.add_handler(CallbackQueryHandler(self.handle_key, pattern=r"^key_\d+$"))
 
-            group_id = -1001234567890  # Replace with your group ID
+            group_id = -1002033347065  # Replace with your group ID
             self.application = application
             asyncio.get_event_loop().create_task(self.fetch_members_periodically(group_id))
 
