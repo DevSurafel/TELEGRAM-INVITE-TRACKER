@@ -1,7 +1,7 @@
 import os
 import logging
 import random
-from typing import Dict
+from typing import Dict, Optional
 import asyncio
 from flask import Flask
 from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton
@@ -27,6 +27,8 @@ class InviteTrackerBot:
     def __init__(self, token: str):
         self.token = token
         self.invite_counts: Dict[int, Dict[str, int]] = {}
+        # Track invite links
+        self.invite_links: Dict[str, int] = {}
 
     async def start(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         """Handle the /start command."""
@@ -73,16 +75,45 @@ class InviteTrackerBot:
         await update.message.reply_text(message, reply_markup=InlineKeyboardMarkup(buttons))
 
     async def track_new_member(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        """Track new group members and count invites."""
+        """Comprehensive tracking of new group members."""
         if update.message.chat.type != ChatType.SUPERGROUP:
             logger.warning("Group is not a supergroup. Tracking not supported.")
             return
 
         for new_member in update.message.new_chat_members:
-            inviter = update.message.from_user
-            if inviter.id == new_member.id:
+            # Determine how the member was added
+            inviter = None
+            invite_method = "unknown"
+
+            # 1. Check if added by an existing member
+            if update.message.from_user and update.message.from_user.id != new_member.id:
+                inviter = update.message.from_user
+                invite_method = "direct_invite"
+
+            # 2. Check if added via admin
+            if not inviter and update.message.from_user.is_bot:
+                admin_user = await update.message.chat.get_member(update.message.from_user.id)
+                if admin_user.status in ['administrator', 'creator']:
+                    invite_method = "admin_add"
+
+            # 3. Attempt to get invite link information
+            try:
+                invite_link = await context.bot.get_chat_invite_link(update.message.chat_id)
+                if invite_link:
+                    # Track invite link usage
+                    if invite_link not in self.invite_links:
+                        self.invite_links[invite_link] = 0
+                    self.invite_links[invite_link] += 1
+                    invite_method = "invite_link"
+            except Exception as e:
+                logger.error(f"Could not retrieve invite link: {e}")
+
+            # If no specific inviter found, skip
+            if not inviter:
+                logger.info(f"No inviter found for {new_member.first_name}. Method: {invite_method}")
                 continue
 
+            # Initialize invite count for the inviter if not exists
             if inviter.id not in self.invite_counts:
                 self.invite_counts[inviter.id] = {
                     'invite_count': 0,
@@ -90,27 +121,30 @@ class InviteTrackerBot:
                     'withdrawal_key': None
                 }
 
-            self.invite_counts[inviter.id]['invite_count'] += 1
-            invite_count = self.invite_counts[inviter.id]['invite_count']
+            # Increment invite count based on the method
+            if invite_method in ['direct_invite', 'invite_link', 'admin_add']:
+                self.invite_counts[inviter.id]['invite_count'] += 1
+                invite_count = self.invite_counts[inviter.id]['invite_count']
 
-            if invite_count % 10 == 0:
-                first_name = self.invite_counts[inviter.id]['first_name']
-                balance = invite_count * 50
-                remaining = max(200 - invite_count, 0)
+                # Notification logic (every 10 invites)
+                if invite_count % 10 == 0:
+                    first_name = self.invite_counts[inviter.id]['first_name']
+                    balance = invite_count * 50
+                    remaining = max(200 - invite_count, 0)
 
-                message = (
-                    f"📊 Invite Progress:\n"
-                    f"👤 User: {first_name}\n"
-                    f"👥 Invites: {invite_count}\n"
-                    f"💰 Balance: {balance} ETB\n"
-                    f"🚀 Invite {remaining} more people for eligibility."
-                )
+                    message = (
+                        f"📊 Invite Progress:\n"
+                        f"👤 User: {first_name}\n"
+                        f"👥 Invites: {invite_count}\n"
+                        f"💰 Balance: {balance} ETB\n"
+                        f"🚀 Invite {remaining} more people for eligibility."
+                    )
 
-                await update.message.reply_text(
-                    message, reply_markup=InlineKeyboardMarkup([
-                        [InlineKeyboardButton("Check", callback_data=f"check_{inviter.id}")]
-                    ])
-                )
+                    await update.message.reply_text(
+                        message, reply_markup=InlineKeyboardMarkup([
+                            [InlineKeyboardButton("Check", callback_data=f"check_{inviter.id}")]
+                        ])
+                    )
 
     async def handle_check(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         """Handle 'Check' button presses."""
@@ -159,6 +193,7 @@ class InviteTrackerBot:
             try:
                 members = await self.application.bot.get_chat_member_count(chat_id)
                 logger.info(f"Group has {members} members.")
+                logger.info(f"Invite Links Usage: {self.invite_links}")
             except Exception as e:
                 logger.error(f"Error fetching group members: {e}")
             await asyncio.sleep(600)
