@@ -1,8 +1,9 @@
 import os
 import logging
-import asyncio
+import random
 from typing import Dict
-from flask import Flask
+import asyncio
+from flask import Flask, request
 from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton
 from telegram.ext import (
     Application, CommandHandler, MessageHandler,
@@ -13,103 +14,118 @@ from telegram.constants import ChatType
 # Initialize Flask app
 app = Flask(__name__)
 
-# Configure logging
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(message)s")
+# Set up logging
+logging.basicConfig(
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    level=logging.INFO,
+)
 logger = logging.getLogger(__name__)
 
+
 class InviteTrackerBot:
-    def __init__(self, token: str):
+    def __init__(self, token: str, webhook_url: str):
         self.token = token
+        self.webhook_url = webhook_url
         self.invite_counts: Dict[int, Dict[str, int]] = {}
 
     async def start(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        user = update.effective_user
-        user_id = user.id
-        self.invite_counts.setdefault(user_id, {'invite_count': 0, 'withdrawal_key': None})
+        """Handle the /start command."""
+        user = update.message.from_user
+        if user.id not in self.invite_counts:
+            self.invite_counts[user.id] = {
+                'invite_count': 0,
+                'first_name': user.first_name,
+                'withdrawal_key': None
+            }
 
-        invites = self.invite_counts[user_id]['invite_count']
-        balance = invites * 50
-        remaining = max(200 - invites, 0)
-        first_name = user.first_name
-
-        message = (
-            f"👤 User: {first_name}\n"
-            f"👥 Invites: {invites}\n"
-            f"💰 Balance: {balance} ETB\n"
-            f"🚀 Remaining to Withdraw: {remaining}\n"
-        )
+        invite_count = self.invite_counts[user.id]['invite_count']
+        first_name = self.invite_counts[user.id]['first_name']
+        balance = invite_count * 50
+        remaining = max(200 - invite_count, 0)
 
         buttons = [
-            [InlineKeyboardButton("Check", callback_data=f"check_{user_id}"),
-             InlineKeyboardButton("Key🔑", callback_data=f"key_{user_id}")],
+            [
+                InlineKeyboardButton("Check", callback_data=f"check_{user.id}"),
+                InlineKeyboardButton("Key🔑", callback_data=f"key_{user.id}")
+            ]
         ]
+
+        if invite_count >= 200:
+            message = (
+                f"Congratulations 👏👏🎉\n\n"
+                f"👤 User: {first_name}\n"
+                f"👥 Invites: {invite_count} people invited!\n"
+                f"💰 Balance: {balance} ETB\n"
+                f"🚀 You are eligible for withdrawal!\n"
+            )
+            buttons.append(
+                [InlineKeyboardButton("Withdrawal Request", url="https://t.me/Digital_Birr_Bot?start=ar6222905852")]
+            )
+        else:
+            message = (
+                f"📊 Invite Progress:\n"
+                f"👤 User: {first_name}\n"
+                f"👥 Invites: {invite_count} people invited\n"
+                f"💰 Balance: {balance} ETB\n"
+                f"🚀 Invite {remaining} more people to become eligible for withdrawal."
+            )
 
         await update.message.reply_text(message, reply_markup=InlineKeyboardMarkup(buttons))
 
-    async def track_new_member(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        inviter = update.effective_user
-        if inviter:
-            user_id = inviter.id
-            self.invite_counts.setdefault(user_id, {'invite_count': 0, 'withdrawal_key': None})
-            self.invite_counts[user_id]['invite_count'] += 1
-            logger.info(f"{inviter.first_name} has now {self.invite_counts[user_id]['invite_count']} invites.")
+    async def handle_update(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Process incoming updates."""
+        await self.application.process_update(update)
 
-    async def handle_check(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        query = update.callback_query
-        user_id = int(query.data.split('_')[1])
-        invites = self.invite_counts.get(user_id, {}).get('invite_count', 0)
-        remaining = max(200 - invites, 0)
-        await query.answer(f"Invites: {invites}, Remaining: {remaining}", show_alert=True)
-
-    async def handle_key(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        query = update.callback_query
-        user_id = int(query.data.split('_')[1])
-        if self.invite_counts.get(user_id, {}).get('invite_count', 0) >= 200:
-            key = self.invite_counts[user_id].setdefault('withdrawal_key', random.randint(100000, 999999))
-            await query.answer(f"Your withdrawal key: {key}", show_alert=True)
-        else:
-            await query.answer("You need at least 200 invites to get a withdrawal key!", show_alert=True)
-
-    async def fetch_members_periodically(self, chat_id: int):
-        while True:
-            try:
-                count = await self.application.bot.get_chat_members_count(chat_id)
-                logger.info(f"Group has {count} members.")
-            except Exception as e:
-                logger.error(f"Failed to fetch group members: {e}")
-            await asyncio.sleep(600)
+    async def set_webhook(self):
+        """Set the webhook for Telegram."""
+        await self.application.bot.set_webhook(self.webhook_url)
 
     def run(self):
-        application = Application.builder().token(self.token).build()
+        """Run the bot using webhooks."""
+        self.application = Application.builder().token(self.token).build()
 
-        # Handlers
-        application.add_handler(CommandHandler("start", self.start))
-        application.add_handler(MessageHandler(filters.StatusUpdate.NEW_CHAT_MEMBERS, self.track_new_member))
-        application.add_handler(CallbackQueryHandler(self.handle_check, pattern=r"^check_\d+$"))
-        application.add_handler(CallbackQueryHandler(self.handle_key, pattern=r"^key_\d+$"))
+        self.application.add_handler(CommandHandler("start", self.start))
+        self.application.add_handler(
+            MessageHandler(filters.StatusUpdate.NEW_CHAT_MEMBERS, self.track_new_member)
+        )
+        self.application.add_handler(CallbackQueryHandler(self.handle_check, pattern=r"^check_\d+$"))
+        self.application.add_handler(CallbackQueryHandler(self.handle_key, pattern=r"^key_\d+$"))
 
-        # Periodic Task
-        self.application = application
-        group_id = -1002033347065  # Replace with actual group ID
-        asyncio.get_event_loop().create_task(self.fetch_members_periodically(group_id))
+        # Set the webhook
+        asyncio.get_event_loop().run_until_complete(self.set_webhook())
 
-        logger.info("Starting bot...")
-        application.run_polling()
 
-# Flask health check
-@app.route('/')
+# Flask endpoint for Telegram webhook
+@app.route("/webhook", methods=["POST"])
+def webhook():
+    """Handle incoming updates from Telegram."""
+    json_data = request.get_json()
+    update = Update.de_json(json_data, bot.application.bot)
+    asyncio.run(bot.handle_update(update))
+    return "OK", 200
+
+
+@app.route("/")
 def health_check():
+    """Health check endpoint."""
     return "Bot is running!"
 
+
 def main():
-    token = os.getenv('TELEGRAM_BOT_TOKEN')
-    if not token:
-        logger.error("Bot token not provided.")
+    TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
+    WEBHOOK_URL = f"https://{os.getenv('ec2-52-202-93-138.compute-1.amazonaws.com')}/webhook"
+
+    if not TOKEN or not WEBHOOK_URL:
+        logger.error("Bot token or webhook URL is not set.")
         return
 
-    bot = InviteTrackerBot(token)
-    asyncio.run(bot.run())
+    global bot
+    bot = InviteTrackerBot(TOKEN, WEBHOOK_URL)
+    bot.run()
+
+    # Run Flask app
+    app.run(host="0.0.0.0", port=443, ssl_context=("cert.pem", "key.pem"))
+
 
 if __name__ == "__main__":
-    app.run(port=5000)
     main()
