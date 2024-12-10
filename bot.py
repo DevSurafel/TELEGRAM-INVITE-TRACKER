@@ -29,6 +29,7 @@ class InviteTrackerBot:
         self.invite_counts: Dict[int, Dict[str, int]] = {}
 
     async def start(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        """Handle the /start command."""
         user = update.message.from_user
         if user.id not in self.invite_counts:
             self.invite_counts[user.id] = {
@@ -52,85 +53,67 @@ class InviteTrackerBot:
         if invite_count >= 200:
             message = (
                 f"Congratulations 👏👏🎉\n\n"
-                f"📊 Milestone Achieved: @Digital_Birri\n"
                 f"👤 User: {first_name}\n"
-                f"👥 Invites: Nama {invite_count} afeertaniittu!\n"
+                f"👥 Invites: {invite_count} people invited!\n"
                 f"💰 Balance: {balance} ETB\n"
-                f"🚀 Baafachuuf: Baafachuu ni dandeessu!\n"
-                f"-----------------------\n\n"
-                f"Baafachuuf kan jedhu tuquun baafadhaa 👇"
+                f"🚀 You are eligible for withdrawal!\n"
             )
             buttons.append(
                 [InlineKeyboardButton("Withdrawal Request", url="https://t.me/Digital_Birr_Bot?start=ar6222905852")]
             )
         else:
             message = (
-                f"📊 Invite Progress: @Digital_Birri\n"
+                f"📊 Invite Progress:\n"
                 f"👤 User: {first_name}\n"
-                f"👥 Invites: Nama {invite_count} afeertaniittu\n"
+                f"👥 Invites: {invite_count} people invited\n"
                 f"💰 Balance: {balance} ETB\n"
-                f"🚀 Baafachuuf: Dabalataan nama {remaining} afeeraa\n"
-                f"-----------------------\n\n"
-                f"Add gochuun carraa badhaasaa keessan dabalaa!"
+                f"🚀 Invite {remaining} more people to become eligible for withdrawal."
             )
 
         await update.message.reply_text(message, reply_markup=InlineKeyboardMarkup(buttons))
 
     async def track_new_member(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        """Track new group members and count invites."""
         if update.message.chat.type != ChatType.SUPERGROUP:
-            logger.warning("Group is not a supergroup. Please convert it for better tracking.")
+            logger.warning("Group is not a supergroup. Tracking not supported.")
             return
 
         for new_member in update.message.new_chat_members:
-            try:
-                inviter = update.message.from_user
-                if inviter.id == new_member.id:
-                    continue
+            inviter = update.message.from_user
+            if inviter.id == new_member.id:
+                continue
 
-                if inviter.id not in self.invite_counts:
-                    self.invite_counts[inviter.id] = {
-                        'invite_count': 0,
-                        'first_name': inviter.first_name,
-                        'withdrawal_key': None
-                    }
+            if inviter.id not in self.invite_counts:
+                self.invite_counts[inviter.id] = {
+                    'invite_count': 0,
+                    'first_name': inviter.first_name,
+                    'withdrawal_key': None
+                }
 
-                self.invite_counts[inviter.id]['invite_count'] += 1
-                invite_count = self.invite_counts[inviter.id]['invite_count']
+            self.invite_counts[inviter.id]['invite_count'] += 1
+            invite_count = self.invite_counts[inviter.id]['invite_count']
 
-                if invite_count % 10 == 0:
-                    first_name = self.invite_counts[inviter.id]['first_name']
-                    balance = invite_count * 50
-                    remaining = max(200 - invite_count, 0)
+            if invite_count % 10 == 0:
+                first_name = self.invite_counts[inviter.id]['first_name']
+                balance = invite_count * 50
+                remaining = max(200 - invite_count, 0)
 
-                    if invite_count >= 200:
-                        message = (
-                            f"Congratulations 👏👏🎉\n\n"
-                            f"👤 User: {first_name}\n"
-                            f"👥 Invites: Nama {invite_count} afeertaniittu\n"
-                            f"💰 Balance: {balance} ETB\n"
-                            f"🚀 Baafachuuf: Baafachuu ni dandeessu!"
-                        )
-                        buttons = [
-                            [InlineKeyboardButton("Baafachuuf", url="https://t.me/Digital_Birr_Bot?start=ar6222905852")]
-                        ]
-                    else:
-                        message = (
-                            f"📊 Invite Progress: @Digital_Birri\n"
-                            f"👤 User: {first_name}\n"
-                            f"👥 Invites: Nama {invite_count} afeertaniittu\n"
-                            f"💰 Balance: {balance} ETB\n"
-                            f"🚀 Baafachuuf: Dabalataan nama {remaining} afeeraa"
-                        )
-                        buttons = [
-                            [InlineKeyboardButton("Check", callback_data=f"check_{inviter.id}")]
-                        ]
+                message = (
+                    f"📊 Invite Progress:\n"
+                    f"👤 User: {first_name}\n"
+                    f"👥 Invites: {invite_count}\n"
+                    f"💰 Balance: {balance} ETB\n"
+                    f"🚀 Invite {remaining} more people for eligibility."
+                )
 
-                    await update.message.reply_text(message, reply_markup=InlineKeyboardMarkup(buttons))
-
-            except Exception as e:
-                logger.error(f"Error tracking invite: {e}")
+                await update.message.reply_text(
+                    message, reply_markup=InlineKeyboardMarkup([
+                        [InlineKeyboardButton("Check", callback_data=f"check_{inviter.id}")]
+                    ])
+                )
 
     async def handle_check(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        """Handle 'Check' button presses."""
         query = update.callback_query
         user_id = int(query.data.split('_')[1])
 
@@ -140,16 +123,15 @@ class InviteTrackerBot:
 
         user_data = self.invite_counts[user_id]
         invite_count = user_data['invite_count']
-        first_name = user_data['first_name']
-        balance = invite_count * 50
         remaining = max(200 - invite_count, 0)
 
         await query.answer(
-            f"Kabajamoo {first_name}, maallaqa baafachuuf dabalataan nama {remaining} afeeruu qabdu",
+            f"You need to invite {remaining} more people to reach your goal!",
             show_alert=True,
         )
 
     async def handle_key(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        """Handle 'Key🔑' button presses."""
         query = update.callback_query
         user_id = int(query.data.split('_')[1])
 
@@ -159,33 +141,30 @@ class InviteTrackerBot:
 
         user_data = self.invite_counts[user_id]
         invite_count = user_data['invite_count']
-        first_name = user_data['first_name']
 
         if invite_count >= 200:
             if not user_data['withdrawal_key']:
                 user_data['withdrawal_key'] = random.randint(100000, 999999)
             withdrawal_key = user_data['withdrawal_key']
-            await query.answer(
-                f"Kabajamoo {first_name}, Lakkoofsi Key🔑 keessanii: 👉{withdrawal_key}",
-                show_alert=True,
-            )
+            await query.answer(f"Your withdrawal key: {withdrawal_key}", show_alert=True)
         else:
             await query.answer(
-                f"Kabajamoo {first_name}, lakkoofsa Key argachuuf yoo xiqqaate nama 200 afeeruu qabdu!",
+                "You need to invite at least 200 people to receive a withdrawal key!",
                 show_alert=True,
             )
 
     async def fetch_members_periodically(self, chat_id: int):
+        """Periodically fetch group member count."""
         while True:
             try:
-                chat = await self.application.bot.get_chat(chat_id)
-                members = await self.application.bot.get_chat_members_count(chat.id)
-                logger.info(f"Group {chat.title} has {members} members.")
+                members = await self.application.bot.get_chat_member_count(chat_id)
+                logger.info(f"Group has {members} members.")
             except Exception as e:
                 logger.error(f"Error fetching group members: {e}")
             await asyncio.sleep(600)
 
     def run(self):
+        """Run the bot."""
         try:
             application = Application.builder().token(self.token).build()
 
@@ -194,13 +173,11 @@ class InviteTrackerBot:
             application.add_handler(CallbackQueryHandler(self.handle_check, pattern=r"^check_\d+$"))
             application.add_handler(CallbackQueryHandler(self.handle_key, pattern=r"^key_\d+$"))
 
-            # Start periodic fetch
             group_id = -1002033347065  # Replace with your group ID
-            self.application = application  # Needed for periodic fetch
+            self.application = application
             asyncio.get_event_loop().create_task(self.fetch_members_periodically(group_id))
 
-            logger.info("Bot started successfully!")
-            asyncio.run(application.run_polling(drop_pending_updates=True))
+            application.run_polling(drop_pending_updates=True)
 
         except Conflict:
             logger.error("Bot conflict: Another instance is running.")
@@ -217,12 +194,10 @@ def index():
 def main():
     TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
     if not TOKEN:
-        logger.error("No bot token provided. Set TELEGRAM_BOT_TOKEN environment variable.")
+        logger.error("No bot token provided.")
         return
 
     bot = InviteTrackerBot(TOKEN)
-
-    # Run the bot and Flask app concurrently
     loop = asyncio.get_event_loop()
     loop.create_task(bot.run())
     app.run(host='0.0.0.0', port=int(os.getenv('PORT', 5000)))
