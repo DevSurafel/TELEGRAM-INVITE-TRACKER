@@ -9,7 +9,6 @@ from telegram.ext import (
     Application, CommandHandler, MessageHandler,
     CallbackQueryHandler, filters, ContextTypes
 )
-from telegram.constants import ChatType
 
 # Initialize Flask app
 app = Flask(__name__)
@@ -27,6 +26,7 @@ class InviteTrackerBot:
         self.token = token
         self.webhook_url = webhook_url
         self.invite_counts: Dict[int, Dict[str, int]] = {}
+        self.application = Application.builder().token(self.token).build()
 
     async def start(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         """Handle the /start command."""
@@ -82,17 +82,9 @@ class InviteTrackerBot:
 
     def run(self):
         """Run the bot using webhooks."""
-        self.application = Application.builder().token(self.token).build()
-
         self.application.add_handler(CommandHandler("start", self.start))
-        self.application.add_handler(
-            MessageHandler(filters.StatusUpdate.NEW_CHAT_MEMBERS, self.track_new_member)
-        )
-        self.application.add_handler(CallbackQueryHandler(self.handle_check, pattern=r"^check_\d+$"))
-        self.application.add_handler(CallbackQueryHandler(self.handle_key, pattern=r"^key_\d+$"))
 
-        # Set the webhook
-        asyncio.get_event_loop().run_until_complete(self.set_webhook())
+        asyncio.run(self.set_webhook())
 
 
 # Flask endpoint for Telegram webhook
@@ -113,17 +105,18 @@ def health_check():
 
 def main():
     TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
-    WEBHOOK_URL = f"https://{os.getenv('ec2-52-202-93-138.compute-1.amazonaws.com')}/webhook"
+    PUBLIC_IP = os.getenv('PUBLIC_IP')  # Set this to your EC2 public IP or domain
+    WEBHOOK_URL = f"https://{PUBLIC_IP}/webhook"
 
-    if not TOKEN or not WEBHOOK_URL:
-        logger.error("Bot token or webhook URL is not set.")
+    if not TOKEN or not PUBLIC_IP:
+        logger.error("Bot token or public IP is not set.")
         return
 
     global bot
     bot = InviteTrackerBot(TOKEN, WEBHOOK_URL)
     bot.run()
 
-    # Run Flask app
+    # Run Flask app with SSL
     app.run(host="0.0.0.0", port=443, ssl_context=("cert.pem", "key.pem"))
 
 
