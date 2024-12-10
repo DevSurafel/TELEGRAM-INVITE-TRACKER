@@ -7,7 +7,7 @@ from flask import Flask
 from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton
 from telegram.ext import (
     Application, CommandHandler, MessageHandler,
-    CallbackQueryHandler, filters, ContextTypes
+    CallbackQueryHandler, filters, ContextTypes, Dispatcher
 )
 from telegram.constants import ChatType
 from telegram.error import Conflict
@@ -29,7 +29,6 @@ class InviteTrackerBot:
         self.invite_counts: Dict[int, Dict[str, int]] = {}
 
     async def start(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        """Handle the /start command."""
         user = update.message.from_user
         if user.id not in self.invite_counts:
             self.invite_counts[user.id] = {
@@ -73,7 +72,6 @@ class InviteTrackerBot:
         await update.message.reply_text(message, reply_markup=InlineKeyboardMarkup(buttons))
 
     async def track_new_member(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        """Track new group members and count invites."""
         if update.message.chat.type != ChatType.SUPERGROUP:
             logger.warning("Group is not a supergroup. Tracking not supported.")
             return
@@ -113,7 +111,6 @@ class InviteTrackerBot:
                 )
 
     async def handle_check(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        """Handle 'Check' button presses."""
         query = update.callback_query
         user_id = int(query.data.split('_')[1])
 
@@ -131,7 +128,6 @@ class InviteTrackerBot:
         )
 
     async def handle_key(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        """Handle 'Key🔑' button presses."""
         query = update.callback_query
         user_id = int(query.data.split('_')[1])
 
@@ -154,24 +150,23 @@ class InviteTrackerBot:
             )
 
     async def fetch_members_periodically(self, chat_id: int):
-        """Periodically fetch group member count."""
         while True:
             try:
-                members = await self.application.bot.get_chat_member_count(chat_id)
+                members = await self.application.bot.get_chat_members_count(chat_id)
                 logger.info(f"Group has {members} members.")
             except Exception as e:
                 logger.error(f"Error fetching group members: {e}")
             await asyncio.sleep(600)
 
     def run(self):
-        """Run the bot."""
         try:
             application = Application.builder().token(self.token).build()
+            dispatcher = application.dispatcher
 
-            application.add_handler(CommandHandler("start", self.start))
-            application.add_handler(MessageHandler(filters.StatusUpdate.NEW_CHAT_MEMBERS, self.track_new_member))
-            application.add_handler(CallbackQueryHandler(self.handle_check, pattern=r"^check_\d+$"))
-            application.add_handler(CallbackQueryHandler(self.handle_key, pattern=r"^key_\d+$"))
+            dispatcher.add_handler(CommandHandler("start", self.start))
+            dispatcher.add_handler(MessageHandler(filters.StatusUpdate.NEW_CHAT_MEMBERS, self.track_new_member))
+            dispatcher.add_handler(CallbackQueryHandler(self.handle_check, pattern=r"^check_\d+$"))
+            dispatcher.add_handler(CallbackQueryHandler(self.handle_key, pattern=r"^key_\d+$"))
 
             group_id = -1002033347065  # Replace with your group ID
             self.application = application
