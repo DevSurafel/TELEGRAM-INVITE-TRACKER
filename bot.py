@@ -10,7 +10,7 @@ from telegram.ext import (
     CallbackQueryHandler, filters, ContextTypes
 )
 from telegram.constants import ChatType
-from telegram.error import Conflict
+from telegram.error import Conflict, TelegramError
 
 # Initialize Flask app
 app = Flask(__name__)
@@ -27,8 +27,8 @@ class InviteTrackerBot:
     def __init__(self, token: str):
         self.token = token
         self.invite_counts: Dict[int, Dict[str, int]] = {}
-        # Track invite links
-        self.invite_links: Dict[str, int] = {}
+        # Track user first join timestamp to prevent double counting
+        self.user_join_timestamps: Dict[int, float] = {}
 
     async def start(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         """Handle the /start command."""
@@ -81,50 +81,47 @@ class InviteTrackerBot:
             return
 
         for new_member in update.message.new_chat_members:
-            # Determine how the member was added
-            inviter = None
-            invite_method = "unknown"
-
-            # 1. Check if added by an existing member
-            if update.message.from_user and update.message.from_user.id != new_member.id:
-                inviter = update.message.from_user
-                invite_method = "direct_invite"
-
-            # 2. Check if added via admin
-            if not inviter and update.message.from_user.is_bot:
-                admin_user = await update.message.chat.get_member(update.message.from_user.id)
-                if admin_user.status in ['administrator', 'creator']:
-                    invite_method = "admin_add"
-
-            # 3. Attempt to get invite link information
-            try:
-                invite_link = await context.bot.get_chat_invite_link(update.message.chat_id)
-                if invite_link:
-                    # Track invite link usage
-                    if invite_link not in self.invite_links:
-                        self.invite_links[invite_link] = 0
-                    self.invite_links[invite_link] += 1
-                    invite_method = "invite_link"
-            except Exception as e:
-                logger.error(f"Could not retrieve invite link: {e}")
-
-            # If no specific inviter found, skip
-            if not inviter:
-                logger.info(f"No inviter found for {new_member.first_name}. Method: {invite_method}")
+            # Skip if this user has joined recently to prevent double counting
+            if new_member.id in self.user_join_timestamps:
+                logger.info(f"User {new_member.first_name} already tracked.")
                 continue
 
-            # Initialize invite count for the inviter if not exists
-            if inviter.id not in self.invite_counts:
-                self.invite_counts[inviter.id] = {
-                    'invite_count': 0,
-                    'first_name': inviter.first_name,
-                    'withdrawal_key': None
-                }
+            # Try to get the user who added the new member
+            try:
+                # Attempt to get chat member info to identify who added the user
+                chat = update.message.chat
+                inviter = None
 
-            # Increment invite count based on the method
-            if invite_method in ['direct_invite', 'invite_link', 'admin_add']:
+                # Try to find the inviter
+                try:
+                    added_by = update.message.from_user
+                    if added_by and added_by.id != new_member.id:
+                        # Check if the added_by user is an admin or the new member's inviter
+                        chat_member = await chat.get_member(added_by.id)
+                        if chat_member.status in ['administrator', 'creator'] or added_by.id != new_member.id:
+                            inviter = added_by
+                except Exception as admin_check_error:
+                    logger.error(f"Error checking admin status: {admin_check_error}")
+
+                # If no specific inviter found, log and continue
+                if not inviter:
+                    logger.info(f"No specific inviter found for {new_member.first_name}")
+                    continue
+
+                # Initialize invite count for the inviter
+                if inviter.id not in self.invite_counts:
+                    self.invite_counts[inviter.id] = {
+                        'invite_count': 0,
+                        'first_name': inviter.first_name,
+                        'withdrawal_key': None
+                    }
+
+                # Increment invite count
                 self.invite_counts[inviter.id]['invite_count'] += 1
                 invite_count = self.invite_counts[inviter.id]['invite_count']
+
+                # Mark this user as tracked
+                self.user_join_timestamps[new_member.id] = asyncio.get_event_loop().time()
 
                 # Notification logic (every 10 invites)
                 if invite_count % 10 == 0:
@@ -145,6 +142,11 @@ class InviteTrackerBot:
                             [InlineKeyboardButton("Check", callback_data=f"check_{inviter.id}")]
                         ])
                     )
+
+                logger.info(f"Tracked invite: {inviter.first_name} added {new_member.first_name}")
+
+            except Exception as e:
+                logger.error(f"Error tracking new member: {e}")
 
     async def handle_check(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         """Handle 'Check' button presses."""
@@ -188,12 +190,24 @@ class InviteTrackerBot:
             )
 
     async def fetch_members_periodically(self, chat_id: int):
-        """Periodically fetch group member count."""
+        """Periodically fetch group member count and invite statistics."""
         while True:
             try:
                 members = await self.application.bot.get_chat_member_count(chat_id)
                 logger.info(f"Group has {members} members.")
-                logger.info(f"Invite Links Usage: {self.invite_links}")
+                
+                # Log invite counts
+                for user_id, data in self.invite_counts.items():
+                    if data['invite_count'] > 0:
+                        logger.info(f"User {data['first_name']} (ID: {user_id}): {data['invite_count']} invites")
+                
+                # Optional: Clean up old join timestamps
+                current_time = asyncio.get_event_loop().time()
+                self.user_join_timestamps = {
+                    k: v for k, v in self.user_join_timestamps.items() 
+                    if current_time - v < 86400  # Keep timestamps for 24 hours
+                }
+
             except Exception as e:
                 logger.error(f"Error fetching group members: {e}")
             await asyncio.sleep(600)
