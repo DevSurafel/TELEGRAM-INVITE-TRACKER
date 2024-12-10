@@ -85,6 +85,6 @@ class TelegramBot:
         app.run_polling()
 
 if __name__ == "__main__":
-    TOKEN = "YOUR_BOT_TOKEN_HERE"
+    TOKEN = "7726783785:AAHWRISAiUfcvc67hrxE1RZCjxLkGUwaTxo"
     bot = TelegramBot(TOKEN)
     bot.run()
