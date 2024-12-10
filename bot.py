@@ -292,9 +292,8 @@ def main():
 
     bot = InviteTrackerBot(TOKEN)
     loop = asyncio.get_event_loop()
-    loop.create_task(bot.run())
-    app.run(host='0.0.0.0', port=int(os.getenv('PORT', 5000)))
-
+    loop.create_task(bot.run())  # Run the bot asynchronously
+    app.run(host='0.0.0.0', port=int(os.getenv('PORT', 5000)))  # Start Flask app
 
 if __name__ == "__main__":
     main()
