@@ -83,7 +83,6 @@ class InviteTrackerBot:
     def run(self):
         """Run the bot using webhooks."""
         self.application.add_handler(CommandHandler("start", self.start))
-
         asyncio.run(self.set_webhook())
 
 
@@ -116,8 +115,8 @@ def main():
     bot = InviteTrackerBot(TOKEN, WEBHOOK_URL)
     bot.run()
 
-    # Run Flask app with SSL
-    app.run(host="0.0.0.0", port=443, ssl_context=("cert.pem", "key.pem"))
+    # Run Flask app on a non-privileged port (e.g., 8443) with SSL
+    app.run(host="0.0.0.0", port=8443, ssl_context=("cert.pem", "key.pem"))
 
 
 if __name__ == "__main__":
