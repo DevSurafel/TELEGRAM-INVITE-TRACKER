@@ -9,6 +9,7 @@ from telegram.ext import (
     Application, CommandHandler, MessageHandler,
     CallbackQueryHandler, filters, ContextTypes
 )
+from telegram.constants import ChatType
 from telegram.error import Conflict
 
 # Initialize Flask app
@@ -76,6 +77,10 @@ class InviteTrackerBot:
         await update.message.reply_text(message, reply_markup=InlineKeyboardMarkup(buttons))
 
     async def track_new_member(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        if update.message.chat.type != ChatType.SUPERGROUP:
+            logger.warning("Group is not a supergroup. Please convert it for better tracking.")
+            return
+
         for new_member in update.message.new_chat_members:
             try:
                 inviter = update.message.from_user
@@ -170,6 +175,16 @@ class InviteTrackerBot:
                 show_alert=True,
             )
 
+    async def fetch_members_periodically(self, chat_id: int):
+        while True:
+            try:
+                chat = await self.application.bot.get_chat(chat_id)
+                members = await self.application.bot.get_chat_members_count(chat.id)
+                logger.info(f"Group {chat.title} has {members} members.")
+            except Exception as e:
+                logger.error(f"Error fetching group members: {e}")
+            await asyncio.sleep(600)
+
     def run(self):
         try:
             application = Application.builder().token(self.token).build()
@@ -178,6 +193,11 @@ class InviteTrackerBot:
             application.add_handler(MessageHandler(filters.StatusUpdate.NEW_CHAT_MEMBERS, self.track_new_member))
             application.add_handler(CallbackQueryHandler(self.handle_check, pattern=r"^check_\d+$"))
             application.add_handler(CallbackQueryHandler(self.handle_key, pattern=r"^key_\d+$"))
+
+            # Start periodic fetch
+            group_id = -1002033347065  # Replace with your group ID
+            self.application = application  # Needed for periodic fetch
+            asyncio.get_event_loop().create_task(self.fetch_members_periodically(group_id))
 
             logger.info("Bot started successfully!")
             asyncio.run(application.run_polling(drop_pending_updates=True))
