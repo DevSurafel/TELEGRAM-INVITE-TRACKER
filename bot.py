@@ -2,7 +2,7 @@ import os
 import logging
 import random
 import json
-from typing import Dict, Optional
+from typing import Dict
 import asyncio
 from flask import Flask
 from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton
@@ -11,7 +11,7 @@ from telegram.ext import (
     CallbackQueryHandler, filters, ContextTypes
 )
 from telegram.constants import ChatType
-from telegram.error import Conflict, TelegramError
+from telegram.error import Conflict
 
 # Initialize Flask app
 app = Flask(__name__)
@@ -19,7 +19,7 @@ app = Flask(__name__)
 # Set up logging
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    level=logging.DEBUG  # Changed to DEBUG for more information
+    level=logging.DEBUG
 )
 logger = logging.getLogger(__name__)
 
@@ -68,7 +68,6 @@ class InviteTrackerBot:
     def __init__(self, token: str):
         self.token = token
         self.tracker = PersistentInviteTracker()
-        # Track user first join timestamp to prevent double counting
         self.user_join_timestamps: Dict[int, float] = {}
 
     async def start(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -121,8 +120,8 @@ class InviteTrackerBot:
 
     async def track_new_member(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         """Comprehensive tracking of new group members."""
-        if update.message.chat.type != ChatType.SUPERGROUP:
-            logger.warning("Group is not a supergroup. Tracking not supported.")
+        if update.message.chat.type not in [ChatType.SUPERGROUP, ChatType.GROUP]:
+            logger.warning("Event not from a supergroup or regular group. Tracking not supported.")
             return
 
         for new_member in update.message.new_chat_members:
@@ -130,61 +129,45 @@ class InviteTrackerBot:
             if new_member.id in self.user_join_timestamps:
                 logger.info(f"User {new_member.first_name} already tracked.")
                 continue
-
-            # Try to get the user who added the new member
+            
             try:
-                # Attempt to get chat member info to identify who added the user
-                chat = update.message.chat
-                inviter = None
-
-                # Try to find the inviter
-                try:
-                    added_by = update.message.from_user
-                    if added_by and added_by.id != new_member.id:
-                        # Check if the added_by user is an admin or the new member's inviter
-                        chat_member = await chat.get_member(added_by.id)
-                        if chat_member.status in ['administrator', 'creator'] or added_by.id != new_member.id:
-                            inviter = added_by
-                except Exception as admin_check_error:
-                    logger.error(f"Error checking admin status: {admin_check_error}")
-
-                # If no specific inviter found, log and continue
-                if not inviter:
-                    logger.info(f"No specific inviter found for {new_member.first_name}")
-                    continue
-
-                # Increment invite count and get new count
-                new_invite_count = self.tracker.increment_invite_count(
-                    inviter.id, 
-                    inviter.first_name or "Unknown"
-                )
-
-                # Mark this user as tracked
-                self.user_join_timestamps[new_member.id] = asyncio.get_event_loop().time()
-
-                # Notification logic (every 10 invites)
-                if new_invite_count % 10 == 0:
-                    balance = new_invite_count * 50
-                    remaining = max(200 - new_invite_count, 0)
-
-                    message = (
-                        f"📊 Invite Progress:\n"
-                        f"👤 User: {inviter.first_name}\n"
-                        f"👥 Invites: {new_invite_count}\n"
-                        f"💰 Balance: {balance} ETB\n"
-                        f"🚀 Invite {remaining} more people for eligibility."
+                inviter = update.message.from_user
+                if inviter and inviter.id != new_member.id:
+                    # Increment invite count and get new count
+                    new_invite_count = self.tracker.increment_invite_count(
+                        inviter.id,
+                        inviter.first_name or "Unknown"
                     )
 
-                    await update.message.reply_text(
-                        message, reply_markup=InlineKeyboardMarkup([
-                            [InlineKeyboardButton("Check", callback_data=f"check_{inviter.id}")]
-                        ])
-                    )
+                    # Mark this user as tracked
+                    self.user_join_timestamps[new_member.id] = asyncio.get_event_loop().time()
 
-                logger.info(f"Tracked invite: {inviter.first_name} added {new_member.first_name}")
+                    # Notification logic (every 10 invites)
+                    if new_invite_count % 10 == 0 or new_invite_count == 200:
+                        balance = new_invite_count * 50
+                        remaining = max(200 - new_invite_count, 0)
+
+                        message = (
+                            f"📊 Invite Progress:\n"
+                            f"👤 User: {inviter.first_name}\n"
+                            f"👥 Invites: {new_invite_count}\n"
+                            f"💰 Balance: {balance} ETB\n"
+                            f"🚀 Invite {remaining} more people for eligibility."
+                        )
+
+                        await update.message.reply_text(
+                            message, reply_markup=InlineKeyboardMarkup([
+                                [InlineKeyboardButton("Check", callback_data=f"check_{inviter.id}")]
+                            ])
+                        )
+
+                    logger.info(f"Tracked invite: {inviter.first_name} added {new_member.first_name}")
+
+                else:
+                    logger.info(f"{new_member.first_name} added without an inviter.")
 
             except Exception as e:
-                logger.error(f"Comprehensive error tracking new member: {e}")
+                logger.error(f"Error tracking new member {new_member.first_name}: {e}")
 
     async def handle_check(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         """Handle 'Check' button presses."""
