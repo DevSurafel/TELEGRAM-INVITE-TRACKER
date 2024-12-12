@@ -22,7 +22,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # Firebase initialization
-cred = credentials.Certificate("firebase_credentials.json")
+cred_path = os.getenv('FIREBASE_CREDENTIALS')
 firebase_admin.initialize_app(cred)
 db = firestore.client()
 
