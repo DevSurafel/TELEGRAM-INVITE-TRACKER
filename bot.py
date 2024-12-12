@@ -15,7 +15,7 @@ app = Flask(__name__)
 
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    level=logging.INFO,
+    level=logging.DEBUG,  # Change the level to DEBUG for more detailed logs
 )
 logger = logging.getLogger(__name__)
 
@@ -71,22 +71,36 @@ class InviteTrackerBot:
         await update.message.reply_text(message, reply_markup=InlineKeyboardMarkup(buttons))
 
     async def track_new_member(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        logger.debug(f"Received new message: {update.message}")
+        
+        # Log all new chat members
+        if update.message.new_chat_members:
+            logger.debug(f"New members added: {[member.first_name for member in update.message.new_chat_members]}")
+
         for new_member in update.message.new_chat_members:
             try:
                 inviter = update.message.from_user
+                logger.debug(f"Inviter: {inviter.first_name} (ID: {inviter.id})")
+                
                 if inviter.id == new_member.id:
+                    logger.debug("Ignoring self-invite.")
                     continue
+                
+                # Ensure inviter data exists in self.invite_counts
                 if inviter.id not in self.invite_counts:
                     self.invite_counts[inviter.id] = {
                         'invite_count': 0,
                         'first_name': inviter.first_name,
                         'withdrawal_key': None
                     }
+
+                # Update the invite count
                 self.invite_counts[inviter.id]['invite_count'] += 1
                 invite_count = self.invite_counts[inviter.id]['invite_count']
+                logger.debug(f"Updated invite count for {inviter.first_name} (ID: {inviter.id}): {invite_count}")
 
-                # Log the invite tracking information here
-                logger.info(f"{inviter.first_name} (ID: {inviter.id}) added {new_member.first_name} (ID: {new_member.id})")
+                # Log the current state of invite counts for debugging
+                logger.debug(f"Current invite counts: {self.invite_counts}")
 
                 if invite_count % 10 == 0:
                     first_name = self.invite_counts[inviter.id]['first_name']
