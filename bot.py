@@ -132,6 +132,62 @@ class InviteTrackerBot:
             except Exception as e:
                 logger.error(f"Error tracking invite: {e}")
 
+    async def handle_check(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        query = update.callback_query
+        user_id = int(query.data.split('_')[1])
+
+        if user_id not in self.invite_counts:
+            await query.answer("No invitation data found.")
+            return
+
+        user_data = self.invite_counts[user_id]
+        invite_count = user_data['invite_count']
+        first_name = user_data['first_name']
+        balance = invite_count * 50
+        remaining = max(200 - invite_count, 0)
+
+        message = (
+           f"📊 Invite Progress: DIGITAL BIRR\n"
+           f"-----------------------\n"
+           f"👤 User: {first_name}\n"
+           f"👥 Invites: Nama {invite_count} afeertaniittu \n"
+           f"💰 Balance: {balance} ETB\n"
+           f"🚀 Baafachuuf: Dabalataan nama {remaining} afeeraa\n"
+           f"-----------------------\n\n"
+           f"Add gochuun carraa badhaasaa keessan dabalaa!"
+        )
+
+        await query.answer(
+            f"Kabajamoo {first_name}, maallaqa baafachuuf dabalataan nama {remaining} afeeruu qabdu",
+            show_alert=True,
+        )
+
+    async def handle_key(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        query = update.callback_query
+        user_id = int(query.data.split('_')[1])
+
+        if user_id not in self.invite_counts:
+            await query.answer("No invitation data found.")
+            return
+
+        user_data = self.invite_counts[user_id]
+        invite_count = user_data['invite_count']
+        first_name = user_data['first_name']
+
+        if invite_count >= 200:
+            if not user_data['withdrawal_key']:
+                user_data['withdrawal_key'] = random.randint(100000, 999999)
+            withdrawal_key = user_data['withdrawal_key']
+            await query.answer(
+                f"Kabajamoo {first_name}, Lakkoofsi Key🔑 keessanii: 👉{withdrawal_key}",
+                show_alert=True,
+            )
+        else:
+            await query.answer(
+                f"Kabajamoo {first_name}, lakkoofsa Key argachuuf yoo xiqqaate nama 200 afeeruu qabdu!",
+                show_alert=True,
+            )
+
     def run(self):
         application = Application.builder().token(self.token).build()
 
