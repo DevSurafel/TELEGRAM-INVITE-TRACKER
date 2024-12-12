@@ -145,10 +145,9 @@ class InviteTrackerBot:
             async def fetch_group_details():
                 bot = await application.bot.get_chat(TARGET_GROUP_ID)
                 logger.info(f"Tracking group: {bot.title} ({TARGET_GROUP_ID})")
-                members_count = await application.bot.get_chat_members_count(TARGET_GROUP_ID)
-                logger.info(f"Total members: {members_count}")
+                logger.info(f"Total members: {bot.members_count}")
 
-            asyncio.run(fetch_group_details())  # Ensures it is awaited
+            asyncio.run(fetch_group_details())  # Run the group details fetching as a coroutine
             asyncio.get_event_loop().run_until_complete(application.run_polling(drop_pending_updates=True))
 
         except Exception as e:
