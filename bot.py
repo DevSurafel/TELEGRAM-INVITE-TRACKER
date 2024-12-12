@@ -3,6 +3,8 @@ import logging
 import random
 from typing import Dict
 import asyncio
+import firebase_admin
+from firebase_admin import credentials, firestore
 from flask import Flask
 from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton
 from telegram.ext import (
@@ -19,29 +21,36 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+# Firebase initialization
+cred = credentials.Certificate("firebase_credentials.json")
+firebase_admin.initialize_app(cred)
+db = firestore.client()
+
 class InviteTrackerBot:
     def __init__(self, token: str):
         self.token = token
-        self.invite_counts: Dict[int, Dict[str, int]] = {}
 
     async def start(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         user = update.message.from_user
-        if user.id not in self.invite_counts:
-            self.invite_counts[user.id] = {
+        user_ref = db.collection('users').document(str(user.id))
+        user_data = user_ref.get()
+        
+        if not user_data.exists:
+            user_ref.set({
                 'invite_count': 0,
                 'first_name': user.first_name,
                 'withdrawal_key': None
-            }
-        invite_count = self.invite_counts[user.id]['invite_count']
+            })
+        
+        invite_count = user_data.to_dict()['invite_count']
+        first_name = user_data.to_dict()['first_name']
+        balance = invite_count * 50
+        remaining = max(200 - invite_count, 0)
 
         buttons = [
             [InlineKeyboardButton("Check", callback_data=f"check_{user.id}"),
              InlineKeyboardButton("Key🔑", callback_data=f"key_{user.id}")]
         ]
-
-        first_name = self.invite_counts[user.id]['first_name']
-        balance = invite_count * 50
-        remaining = max(200 - invite_count, 0)
 
         if invite_count >= 200:
             message = (
@@ -76,18 +85,23 @@ class InviteTrackerBot:
                 inviter = update.message.from_user
                 if inviter.id == new_member.id:
                     continue
-                if inviter.id not in self.invite_counts:
-                    self.invite_counts[inviter.id] = {
+                
+                user_ref = db.collection('users').document(str(inviter.id))
+                user_data = user_ref.get()
+
+                if not user_data.exists:
+                    user_ref.set({
                         'invite_count': 0,
                         'first_name': inviter.first_name,
                         'withdrawal_key': None
-                    }
-                # Increment the invite count for the inviter
-                self.invite_counts[inviter.id]['invite_count'] += 1
-                invite_count = self.invite_counts[inviter.id]['invite_count']
+                    })
+                
+                invite_count = user_data.to_dict()['invite_count']
+                user_ref.update({'invite_count': invite_count + 1})
+                invite_count += 1
 
                 if invite_count % 10 == 0:
-                    first_name = self.invite_counts[inviter.id]['first_name']
+                    first_name = inviter.first_name
                     balance = invite_count * 50
                     remaining = max(200 - invite_count, 0)
 
@@ -130,11 +144,14 @@ class InviteTrackerBot:
         query = update.callback_query
         user_id = int(query.data.split('_')[1])
 
-        if user_id not in self.invite_counts:
+        user_ref = db.collection('users').document(str(user_id))
+        user_data = user_ref.get()
+
+        if not user_data.exists:
             await query.answer("No invitation data found.")
             return
 
-        user_data = self.invite_counts[user_id]
+        user_data = user_data.to_dict()
         invite_count = user_data['invite_count']
         first_name = user_data['first_name']
         balance = invite_count * 50
@@ -157,17 +174,21 @@ class InviteTrackerBot:
         query = update.callback_query
         user_id = int(query.data.split('_')[1])
 
-        if user_id not in self.invite_counts:
+        user_ref = db.collection('users').document(str(user_id))
+        user_data = user_ref.get()
+
+        if not user_data.exists:
             await query.answer("No invitation data found.")
             return
 
-        user_data = self.invite_counts[user_id]
+        user_data = user_data.to_dict()
         invite_count = user_data['invite_count']
         first_name = user_data['first_name']
 
         if invite_count >= 200:
             if not user_data['withdrawal_key']:
                 user_data['withdrawal_key'] = random.randint(100000, 999999)
+                user_ref.update({'withdrawal_key': user_data['withdrawal_key']})
             withdrawal_key = user_data['withdrawal_key']
             await query.answer(f"Kabajamoo {first_name}, Lakkoofsi Key🔑 keessanii: 👉{withdrawal_key}", show_alert=True)
         else:
