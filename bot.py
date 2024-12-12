@@ -20,16 +20,11 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 class InviteTrackerBot:
-    def __init__(self, token: str, group_id: str):
+    def __init__(self, token: str):
         self.token = token
-        self.group_id = group_id  # Store the group ID
         self.invite_counts: Dict[int, Dict[str, int]] = {}
 
     async def start(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        # Check if the message is from the specified group
-        if update.message.chat.id != int(self.group_id):
-            return  # Ignore if the message is not from the specified group
-
         user = update.message.from_user
         if user.id not in self.invite_counts:
             self.invite_counts[user.id] = {
@@ -51,7 +46,7 @@ class InviteTrackerBot:
         if invite_count >= 200:
             message = (
                 f"Congratulations 👏👏🎉\n\n"
-                f"📊 Milestone Achieved: DIGITAL BIRR\n"
+                f"📊 Milestone Achieved: @Digital_Birri\n"
                 f"-----------------------\n"
                 f"👤 User: {first_name}\n"
                 f"👥 Invites: Nama {invite_count} afeertaniittu! \n"
@@ -63,7 +58,7 @@ class InviteTrackerBot:
             buttons.append([InlineKeyboardButton("Withdrawal Request", url="https://t.me/Digital_Birr_Bot?start=ar6222905852")])
         else:
             message = (
-                f"📊 Invite Progress: DIGITAL BIRR\n"
+                f"📊 Invite Progress: @Digital_Birri\n"
                 f"-----------------------\n"
                 f"👤 User: {first_name}\n"
                 f"👥 Invites: Nama {invite_count} afeertaniittu \n"
@@ -76,10 +71,6 @@ class InviteTrackerBot:
         await update.message.reply_text(message, reply_markup=InlineKeyboardMarkup(buttons))
 
     async def track_new_member(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        # Check if the message is from the specified group
-        if update.message.chat.id != int(self.group_id):
-            return  # Ignore if the message is not from the specified group
-
         for new_member in update.message.new_chat_members:
             try:
                 inviter = update.message.from_user
@@ -102,7 +93,7 @@ class InviteTrackerBot:
                     if invite_count >= 200:
                         message = (
                             f"Congratulations 👏👏🎉\n\n"
-                            f"📊 Milestone Achieved: DIGITAL BIRR\n"
+                            f"📊 Milestone Achieved: @Digital_Birri\n"
                             f"-----------------------\n"
                             f"👤 User: {first_name}\n"
                             f"👥 Invites: Nama {invite_count} afeertaniittu\n"
@@ -116,7 +107,7 @@ class InviteTrackerBot:
                         ]
                     else:
                         message = (
-                         f"📊 Invite Progress: DIGITAL BIRR\n"
+                         f"📊 Invite Progress: @Digital_Birri\n"
                 f"-----------------------\n"
                 f"👤 User: {first_name}\n"
                 f"👥 Invites: Nama {invite_count} afeertaniittu \n"
@@ -149,7 +140,7 @@ class InviteTrackerBot:
         remaining = max(200 - invite_count, 0)
 
         message = (
-           f"📊 Invite Progress: DIGITAL BIRR\n"
+           f"📊 Invite Progress: @Digital_Birri\n"
                 f"-----------------------\n"
                 f"👤 User: {first_name}\n"
                 f"👥 Invites: Nama {invite_count} afeertaniittu \n"
@@ -205,12 +196,11 @@ def index():
 
 def main():
     TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
-    GROUP_ID = os.getenv('GROUP_ID')  # Get the group ID from environment variables
-    if not TOKEN or not GROUP_ID:
-        logger.error("No bot token or group ID provided. Set TELEGRAM_BOT_TOKEN and GROUP_ID environment variables.")
+    if not TOKEN:
+        logger.error("No bot token provided. Set TELEGRAM_BOT_TOKEN environment variable.")
         return
 
-    bot = InviteTrackerBot(TOKEN, GROUP_ID)
+    bot = InviteTrackerBot(TOKEN)
 
     # Run the bot and the Flask app in the same event loop
     loop = asyncio.get_event_loop()
