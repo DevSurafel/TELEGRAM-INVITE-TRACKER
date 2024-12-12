@@ -11,6 +11,10 @@ from telegram.ext import (
     Application, CommandHandler, MessageHandler,
     CallbackQueryHandler, filters, ContextTypes
 )
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
 
 # Initialize Flask app
 app = Flask(__name__)
@@ -23,6 +27,7 @@ logger = logging.getLogger(__name__)
 
 # Firebase initialization
 cred_path = os.getenv('FIREBASE_CREDENTIALS')
+cred = credentials.Certificate(cred_path)
 firebase_admin.initialize_app(cred)
 db = firestore.client()
 
