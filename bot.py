@@ -23,6 +23,7 @@ class InviteTrackerBot:
     def __init__(self, token: str):
         self.token = token
         self.invite_counts: Dict[int, Dict[str, int]] = {}
+        self.group_migration_map: Dict[int, int] = {}  # Map old group ID to new group ID
 
     async def start(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         user = update.message.from_user
@@ -46,7 +47,7 @@ class InviteTrackerBot:
         if invite_count >= 200:
             message = (
                 f"Congratulations 👏👏🎉\n\n"
-                f"📊 Milestone Achieved: DIGITAL BIRR\n"
+                f"📊 Milestone Achieved: @Digital_Birri\n"
                 f"-----------------------\n"
                 f"👤 User: {first_name}\n"
                 f"👥 Invites: Nama {invite_count} afeertaniittu! \n"
@@ -58,7 +59,7 @@ class InviteTrackerBot:
             buttons.append([InlineKeyboardButton("Withdrawal Request", url="https://t.me/Digital_Birr_Bot?start=ar6222905852")])
         else:
             message = (
-                f"📊 Invite Progress: DIGITAL BIRR\n"
+                f"📊 Invite Progress: @Digital_Birri\n"
                 f"-----------------------\n"
                 f"👤 User: {first_name}\n"
                 f"👥 Invites: Nama {invite_count} afeertaniittu \n"
@@ -70,18 +71,38 @@ class InviteTrackerBot:
 
         await update.message.reply_text(message, reply_markup=InlineKeyboardMarkup(buttons))
 
+    async def track_group_migration(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        """Handle group migration from normal group to supergroup"""
+        migrate_from_chat_id = update.message.migrate_from_chat_id
+        migrate_to_chat_id = update.message.chat_id
+
+        if migrate_from_chat_id and migrate_to_chat_id:
+            # Store mapping between old and new group IDs
+            self.group_migration_map[migrate_from_chat_id] = migrate_to_chat_id
+            logger.info(f"Group migrated: {migrate_from_chat_id} -> {migrate_to_chat_id}")
+
     async def track_new_member(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        current_chat_id = update.message.chat_id
+
+        # Get the original chat ID even after migration
+        original_chat_id = next(
+            (old_id for old_id, new_id in self.group_migration_map.items() if new_id == current_chat_id), 
+            current_chat_id
+        )
+
         for new_member in update.message.new_chat_members:
             try:
                 inviter = update.message.from_user
                 if inviter.id == new_member.id:
                     continue
+                
                 if inviter.id not in self.invite_counts:
                     self.invite_counts[inviter.id] = {
                         'invite_count': 0,
                         'first_name': inviter.first_name,
                         'withdrawal_key': None
                     }
+                
                 self.invite_counts[inviter.id]['invite_count'] += 1
                 invite_count = self.invite_counts[inviter.id]['invite_count']
 
@@ -93,7 +114,7 @@ class InviteTrackerBot:
                     if invite_count >= 200:
                         message = (
                             f"Congratulations 👏👏🎉\n\n"
-                            f"📊 Milestone Achieved: DIGITAL BIRR\n"
+                            f"📊 Milestone Achieved: @Digital_Birri\n"
                             f"-----------------------\n"
                             f"👤 User: {first_name}\n"
                             f"👥 Invites: Nama {invite_count} afeertaniittu\n"
@@ -107,14 +128,14 @@ class InviteTrackerBot:
                         ]
                     else:
                         message = (
-                         f"📊 Invite Progress: DIGITAL BIRR\n"
-                f"-----------------------\n"
-                f"👤 User: {first_name}\n"
-                f"👥 Invites: Nama {invite_count} afeertaniittu \n"
-                f"💰 Balance: {balance} ETB\n"
-                f"🚀 Baafachuuf: Dabalataan nama {remaining} afeeraa\n"
-                f"-----------------------\n\n"
-                f"Add gochuun carraa badhaasaa keessan dabalaa!"
+                            f"📊 Invite Progress: @Digital_Birri\n"
+                            f"-----------------------\n"
+                            f"👤 User: {first_name}\n"
+                            f"👥 Invites: Nama {invite_count} afeertaniittu \n"
+                            f"💰 Balance: {balance} ETB\n"
+                            f"🚀 Baafachuuf: Dabalataan nama {remaining} afeeraa\n"
+                            f"-----------------------\n\n"
+                            f"Add gochuun carraa badhaasaa keessan dabalaa!"
                         )
                         buttons = [
                             [InlineKeyboardButton("Check", callback_data=f"check_{inviter.id}")]
@@ -140,14 +161,14 @@ class InviteTrackerBot:
         remaining = max(200 - invite_count, 0)
 
         message = (
-           f"📊 Invite Progress: DIGITAL BIRR\n"
-                f"-----------------------\n"
-                f"👤 User: {first_name}\n"
-                f"👥 Invites: Nama {invite_count} afeertaniittu \n"
-                f"💰 Balance: {balance} ETB\n"
-                f"🚀 Baafachuuf: Dabalataan nama {remaining} afeeraa\n"
-                f"-----------------------\n\n"
-                f"Add gochuun carraa badhaasaa keessan dabalaa!"
+           f"📊 Invite Progress: @Digital_Birri\n"
+            f"-----------------------\n"
+            f"👤 User: {first_name}\n"
+            f"👥 Invites: Nama {invite_count} afeertaniittu \n"
+            f"💰 Balance: {balance} ETB\n"
+            f"🚀 Baafachuuf: Dabalataan nama {remaining} afeeraa\n"
+            f"-----------------------\n\n"
+            f"Add gochuun carraa badhaasaa keessan dabalaa!"
         )
 
         await query.answer(f"Kabajamoo {first_name}, maallaqa baafachuuf dabalataan nama {remaining} afeeruu qabdu", show_alert=True)
@@ -175,6 +196,9 @@ class InviteTrackerBot:
     def run(self):
         try:
             application = Application.builder().token(self.token).build()
+
+            # Add handler for group migration
+            application.add_handler(MessageHandler(filters.StatusUpdate.MIGRATE, self.track_group_migration))
 
             application.add_handler(CommandHandler("start", self.start))
             application.add_handler(MessageHandler(filters.StatusUpdate.NEW_CHAT_MEMBERS, self.track_new_member))
