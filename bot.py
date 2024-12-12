@@ -19,9 +19,6 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Define the target supergroup ID
-TARGET_GROUP_ID = -1001234567890  # Replace with your supergroup's actual ID
-
 class InviteTrackerBot:
     def __init__(self, token: str):
         self.token = token
@@ -74,10 +71,6 @@ class InviteTrackerBot:
         await update.message.reply_text(message, reply_markup=InlineKeyboardMarkup(buttons))
 
     async def track_new_member(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        if update.message.chat.id != TARGET_GROUP_ID:
-            logger.info(f"Message received from an unsupported group: {update.message.chat.id}")
-            return
-
         for new_member in update.message.new_chat_members:
             try:
                 inviter = update.message.from_user
@@ -115,13 +108,13 @@ class InviteTrackerBot:
                     else:
                         message = (
                          f"📊 Invite Progress: @DIGITAL_BIRRI\n"
-                         f"-----------------------\n"
-                         f"👤 User: {first_name}\n"
-                         f"👥 Invites: Nama {invite_count} afeertaniittu \n"
-                         f"💰 Balance: {balance} ETB\n"
-                         f"🚀 Baafachuuf: Dabalataan nama {remaining} afeeraa\n"
-                         f"-----------------------\n\n"
-                         f"Add gochuun carraa badhaasaa keessan dabalaa!"
+                f"-----------------------\n"
+                f"👤 User: {first_name}\n"
+                f"👥 Invites: Nama {invite_count} afeertaniittu \n"
+                f"💰 Balance: {balance} ETB\n"
+                f"🚀 Baafachuuf: Dabalataan nama {remaining} afeeraa\n"
+                f"-----------------------\n\n"
+                f"Add gochuun carraa badhaasaa keessan dabalaa!"
                         )
                         buttons = [
                             [InlineKeyboardButton("Check", callback_data=f"check_{inviter.id}")]
@@ -132,22 +125,65 @@ class InviteTrackerBot:
             except Exception as e:
                 logger.error(f"Error tracking invite: {e}")
 
+    async def handle_check(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        query = update.callback_query
+        user_id = int(query.data.split('_')[1])
+
+        if user_id not in self.invite_counts:
+            await query.answer("No invitation data found.")
+            return
+
+        user_data = self.invite_counts[user_id]
+        invite_count = user_data['invite_count']
+        first_name = user_data['first_name']
+        balance = invite_count * 50
+        remaining = max(200 - invite_count, 0)
+
+        message = (
+           f"📊 Invite Progress: @DIGITAL_BIRRI\n"
+                f"-----------------------\n"
+                f"👤 User: {first_name}\n"
+                f"👥 Invites: Nama {invite_count} afeertaniittu \n"
+                f"💰 Balance: {balance} ETB\n"
+                f"🚀 Baafachuuf: Dabalataan nama {remaining} afeeraa\n"
+                f"-----------------------\n\n"
+                f"Add gochuun carraa badhaasaa keessan dabalaa!"
+        )
+
+        await query.answer(f"Kabajamoo {first_name}, maallaqa baafachuuf dabalataan nama {remaining} afeeruu qabdu", show_alert=True)
+
+    async def handle_key(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        query = update.callback_query
+        user_id = int(query.data.split('_')[1])
+
+        if user_id not in self.invite_counts:
+            await query.answer("No invitation data found.")
+            return
+
+        user_data = self.invite_counts[user_id]
+        invite_count = user_data['invite_count']
+        first_name = user_data['first_name']
+
+        if invite_count >= 200:
+            if not user_data['withdrawal_key']:
+                user_data['withdrawal_key'] = random.randint(100000, 999999)
+            withdrawal_key = user_data['withdrawal_key']
+            await query.answer(f"Kabajamoo {first_name}, Lakkoofsi Key🔑 keessanii: 👉{withdrawal_key}", show_alert=True)
+        else:
+            await query.answer(f"Kabajamoo {first_name}, lakkoofsa Key argachuuf yoo xiqqaate nama 200 afeeruu qabdu!", show_alert=True)
+
     def run(self):
         try:
             application = Application.builder().token(self.token).build()
 
             application.add_handler(CommandHandler("start", self.start))
             application.add_handler(MessageHandler(filters.StatusUpdate.NEW_CHAT_MEMBERS, self.track_new_member))
+            application.add_handler(CallbackQueryHandler(self.handle_check, pattern=r'^check_\d+$'))
+            application.add_handler(CallbackQueryHandler(self.handle_key, pattern=r'^key_\d+$'))
 
             logger.info("Bot started successfully!")
 
-            # Fetch group details to verify tracking
-            async def fetch_group_details():
-                bot = await application.bot.get_chat(TARGET_GROUP_ID)
-                logger.info(f"Tracking group: {bot.title} ({TARGET_GROUP_ID})")
-                logger.info(f"Total members: {bot.members_count}")
-
-            asyncio.run(fetch_group_details())  # Run the group details fetching as a coroutine
+            # Run the bot asynchronously, using asyncio.run() in a blocking way
             asyncio.get_event_loop().run_until_complete(application.run_polling(drop_pending_updates=True))
 
         except Exception as e:
