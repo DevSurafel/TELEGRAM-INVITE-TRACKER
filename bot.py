@@ -85,8 +85,8 @@ class InviteTrackerBot:
                 self.invite_counts[inviter.id]['invite_count'] += 1
                 invite_count = self.invite_counts[inviter.id]['invite_count']
 
-                # Log the invitation
-                logger.info(f"{inviter.first_name} added {new_member.first_name}")
+                # Log the invite tracking information here
+                logger.info(f"{inviter.first_name} (ID: {inviter.id}) added {new_member.first_name} (ID: {new_member.id})")
 
                 if invite_count % 10 == 0:
                     first_name = self.invite_counts[inviter.id]['first_name']
