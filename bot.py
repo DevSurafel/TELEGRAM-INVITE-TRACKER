@@ -3,6 +3,7 @@ import logging
 import asyncio
 import json
 import requests
+import random
 from typing import Dict
 import firebase_admin
 from firebase_admin import credentials, firestore
@@ -80,6 +81,7 @@ def ensure_users_collection():
 class InviteTrackerBot:
     def __init__(self, token: str):
         self.token = token
+        self.invited_users = set()  # Track unique invited users
 
     async def start(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         user = update.message.from_user
@@ -90,7 +92,8 @@ class InviteTrackerBot:
             user_ref.set({
                 'invite_count': 0,
                 'first_name': user.first_name,
-                'withdrawal_key': None
+                'withdrawal_key': None,
+                'invited_user_ids': []  # Store IDs of invited users
             })
 
         user_data = user_ref.get().to_dict()
@@ -116,7 +119,12 @@ class InviteTrackerBot:
                 f"-----------------------\n\n"
                 f"Baafachuuf kan jedhu tuquun baafadhaa 👇"
             )
-            buttons.append([InlineKeyboardButton("Withdrawal Request", callback_data=f"withdraw_{user.id}")])
+            buttons.append([
+                InlineKeyboardButton(
+                    "Withdrawal Request", 
+                    url="https://t.me/your_withdrawal_bot_username"
+                )
+            ])
         else:
             message = (
                 f"📊 Invite Progress: @DIGITAL_BIRRI\n"
@@ -133,7 +141,6 @@ class InviteTrackerBot:
 
     async def handle_check(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         query = update.callback_query
-        await query.answer()
         user_id = query.data.split('_')[1]
 
         user_ref = db.collection('users').document(user_id)
@@ -143,34 +150,89 @@ class InviteTrackerBot:
             user_data = user_data.to_dict()
             invite_count = user_data['invite_count']
             balance = invite_count * 50
-            message = f"Your current balance is {balance} ETB, based on {invite_count} invites."
-        else:
-            message = "No data found for this user."
+            remaining = max(200 - invite_count, 0)
+            first_name = user_data.get('first_name', 'User')
 
-        await query.edit_message_text(message)
+            # Pop-up alert with remaining invites
+            await query.answer(
+                f"Kabajamoo {first_name}, maallaqa baafachuuf dabalataan nama {remaining} afeeruu qabdu",
+                show_alert=True
+            )
+
+            # Edit message to show current progress
+            message = (
+                f"📊 Invite Progress: @DIGITAL_BIRRI\n"
+                f"-----------------------\n"
+                f"👤 User: {first_name}\n"
+                f"👥 Invites: {invite_count} afeertaniittu \n"
+                f"💰 Balance: {balance} ETB\n"
+                f"🚀 Baafachuuf: Dabalataan nama {remaining} afeeraa\n"
+                f"-----------------------"
+            )
+            await query.edit_message_text(message)
+        else:
+            await query.answer("No user data found.", show_alert=True)
 
     async def handle_key(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         query = update.callback_query
-        await query.answer()
-        message = "This is the withdrawal key section. Please proceed with the next steps."
-        await query.edit_message_text(message)
+        user_id = query.data.split('_')[1]
+
+        user_ref = db.collection('users').document(user_id)
+        user_data = user_ref.get().to_dict()
+
+        first_name = user_data.get('first_name', 'User')
+        invite_count = user_data.get('invite_count', 0)
+        withdrawal_key = user_data.get('withdrawal_key')
+
+        if invite_count < 200:
+            # Not enough invites
+            await query.answer(
+                f"Kabajamoo {first_name}, lakkoofsa Key argachuuf yoo xiqqaate nama 200 afeeruu qabdu!",
+                show_alert=True
+            )
+        else:
+            # Generate withdrawal key if not already exists
+            if not withdrawal_key:
+                withdrawal_key = ''.join([str(random.randint(0, 9)) for _ in range(6)])
+                user_ref.update({'withdrawal_key': withdrawal_key})
+
+            # Show withdrawal key
+            await query.answer(
+                f"Kabajamoo {first_name}, Lakkoofsi Key🔑 keessanii: 👉{withdrawal_key}",
+                show_alert=True
+            )
 
     async def handle_withdrawal_request(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         query = update.callback_query
-        await query.answer()
         user_id = query.data.split('_')[1]
 
-        # Withdrawal request logic
-        message = "To proceed with withdrawal, please follow the instructions given on the website."
-        await query.edit_message_text(message)
+        user_ref = db.collection('users').document(user_id)
+        user_data = user_ref.get().to_dict()
+
+        if user_data.get('invite_count', 0) >= 200:
+            # Redirect to withdrawal bot
+            await query.answer("Redirecting to withdrawal request...")
+            # Note: The actual redirection is handled by the URL in the button
+        else:
+            await query.answer("You have not yet reached the 200 invite milestone.", show_alert=True)
 
     async def track_new_member(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         for new_member in update.message.new_chat_members:
             try:
                 inviter = update.message.from_user
+                
+                # Prevent self-invite
                 if inviter.id == new_member.id:
                     continue
 
+                # Prevent counting the same user multiple times
+                if new_member.id in self.invited_users:
+                    continue
+
+                # Add to invited users set
+                self.invited_users.add(new_member.id)
+
+                # Update inviter's record
                 user_ref = db.collection('users').document(str(inviter.id))
                 user_data = user_ref.get()
 
@@ -178,11 +240,32 @@ class InviteTrackerBot:
                     user_ref.set({
                         'invite_count': 0,
                         'first_name': inviter.first_name,
-                        'withdrawal_key': None
+                        'withdrawal_key': None,
+                        'invited_user_ids': []
                     })
 
-                invite_count = user_data.to_dict().get('invite_count', 0) if user_data.exists else 0
-                user_ref.update({'invite_count': invite_count + 1})
+                # Fetch current data
+                user_data = user_ref.get().to_dict()
+                
+                # Get current invite count and invited user IDs
+                invite_count = user_data.get('invite_count', 0)
+                invited_user_ids = user_data.get('invited_user_ids', [])
+
+                # Only increment if this user hasn't been invited before
+                if new_member.id not in invited_user_ids:
+                    # Update invite count
+                    new_invite_count = invite_count + 1
+                    
+                    # Update invited users list
+                    invited_user_ids.append(new_member.id)
+                    
+                    # Update Firestore
+                    user_ref.update({
+                        'invite_count': new_invite_count,
+                        'invited_user_ids': invited_user_ids
+                    })
+
+                    logger.info(f"Tracked invite: {inviter.first_name} invited {new_member.first_name}")
 
             except Exception as e:
                 logger.error(f"Error tracking invite: {e}")
