@@ -19,8 +19,18 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Define the target supergroup ID
-TARGET_GROUP_ID = -1001234567890  # Replace with your supergroup's actual ID
+# Fetch the target group ID from environment variables
+TARGET_GROUP_ID = os.getenv('TARGET_GROUP_ID')
+if not TARGET_GROUP_ID:
+    logger.error("No TARGET_GROUP_ID provided. Set TARGET_GROUP_ID environment variable.")
+    exit(1)
+else:
+    try:
+        TARGET_GROUP_ID = int(TARGET_GROUP_ID)  # Convert to integer
+    except ValueError:
+        logger.error("Invalid TARGET_GROUP_ID. Ensure it's a valid integer.")
+        exit(1)
+
 
 class InviteTrackerBot:
     def __init__(self, token: str):
@@ -132,6 +142,18 @@ class InviteTrackerBot:
             except Exception as e:
                 logger.error(f"Error tracking invite: {e}")
 
+    async def fetch_group_details(self, application):
+        try:
+            bot = await application.bot.get_chat(TARGET_GROUP_ID)
+            logger.info(f"Tracking group: {bot.title} ({TARGET_GROUP_ID})")
+            logger.info(f"Total members: {bot.members_count}")
+        except Exception as e:
+            logger.error(f"Error fetching group details: {e}")
+
+    async def run_polling(self, application):
+        await self.fetch_group_details(application)
+        await application.run_polling(drop_pending_updates=True)
+
     def run(self):
         try:
             application = Application.builder().token(self.token).build()
@@ -140,23 +162,17 @@ class InviteTrackerBot:
             application.add_handler(MessageHandler(filters.StatusUpdate.NEW_CHAT_MEMBERS, self.track_new_member))
 
             logger.info("Bot started successfully!")
-
-            # Fetch group details to verify tracking
-            async def fetch_group_details():
-                bot = await application.bot.get_chat(TARGET_GROUP_ID)
-                logger.info(f"Tracking group: {bot.title} ({TARGET_GROUP_ID})")
-                logger.info(f"Total members: {bot.members_count}")
-
-            asyncio.run(fetch_group_details())
-            asyncio.get_event_loop().run_until_complete(application.run_polling(drop_pending_updates=True))
+            asyncio.run(self.run_polling(application))
 
         except Exception as e:
             logger.error(f"Failed to start bot: {e}")
 
-# Web server to keep the service running on Render
+
+# Web server to keep the service running on platforms like Railway
 @app.route('/')
 def index():
     return "Bot is running!"
+
 
 def main():
     TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
@@ -172,6 +188,7 @@ def main():
 
     # Start the Flask app (it will run in the main thread)
     app.run(host='0.0.0.0', port=int(os.getenv('PORT', 5000)))
+
 
 if __name__ == "__main__":
     main()
