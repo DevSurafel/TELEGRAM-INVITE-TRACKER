@@ -15,7 +15,7 @@ app = Flask(__name__)
 
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    level=logging.DEBUG,  # Changed to DEBUG for more detailed logs
+    level=logging.INFO,
 )
 logger = logging.getLogger(__name__)
 
@@ -71,39 +71,20 @@ class InviteTrackerBot:
         await update.message.reply_text(message, reply_markup=InlineKeyboardMarkup(buttons))
 
     async def track_new_member(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        logger.debug(f"Received update: {update.message}")
-
-        if not update.message.new_chat_members:
-            logger.debug("No new members detected in this update.")
-            return
-
-        logger.debug(f"New members added: {[member.first_name for member in update.message.new_chat_members]}")
-
         for new_member in update.message.new_chat_members:
             try:
                 inviter = update.message.from_user
-                logger.debug(f"Inviter: {inviter.first_name} (ID: {inviter.id}), New Member: {new_member.first_name} (ID: {new_member.id})")
-
                 if inviter.id == new_member.id:
-                    logger.debug("Ignoring self-invite.")
                     continue
-
                 if inviter.id not in self.invite_counts:
                     self.invite_counts[inviter.id] = {
                         'invite_count': 0,
                         'first_name': inviter.first_name,
                         'withdrawal_key': None
                     }
-
-                # Update the invite count
                 self.invite_counts[inviter.id]['invite_count'] += 1
                 invite_count = self.invite_counts[inviter.id]['invite_count']
-                logger.info(f"{inviter.first_name} added {new_member.first_name}. Total invites: {invite_count}")
 
-                # Log the current state of invite counts
-                logger.debug(f"Updated invite counts: {self.invite_counts}")
-
-                # Send periodic updates
                 if invite_count % 10 == 0:
                     first_name = self.invite_counts[inviter.id]['first_name']
                     balance = invite_count * 50
@@ -126,14 +107,14 @@ class InviteTrackerBot:
                         ]
                     else:
                         message = (
-                            f"📊 Invite Progress: @Digital_Birri\n"
-                            f"-----------------------\n"
-                            f"👤 User: {first_name}\n"
-                            f"👥 Invites: Nama {invite_count} afeertaniittu \n"
-                            f"💰 Balance: {balance} ETB\n"
-                            f"🚀 Baafachuuf: Dabalataan nama {remaining} afeeraa\n"
-                            f"-----------------------\n\n"
-                            f"Add gochuun carraa badhaasaa keessan dabalaa!"
+                         f"📊 Invite Progress: @Digital_Birri\n"
+                f"-----------------------\n"
+                f"👤 User: {first_name}\n"
+                f"👥 Invites: Nama {invite_count} afeertaniittu \n"
+                f"💰 Balance: {balance} ETB\n"
+                f"🚀 Baafachuuf: Dabalataan nama {remaining} afeeraa\n"
+                f"-----------------------\n\n"
+                f"Add gochuun carraa badhaasaa keessan dabalaa!"
                         )
                         buttons = [
                             [InlineKeyboardButton("Check", callback_data=f"check_{inviter.id}")]
@@ -159,14 +140,14 @@ class InviteTrackerBot:
         remaining = max(200 - invite_count, 0)
 
         message = (
-            f"📊 Invite Progress: @Digital_Birri\n"
-            f"-----------------------\n"
-            f"👤 User: {first_name}\n"
-            f"👥 Invites: Nama {invite_count} afeertaniittu \n"
-            f"💰 Balance: {balance} ETB\n"
-            f"🚀 Baafachuuf: Dabalataan nama {remaining} afeeraa\n"
-            f"-----------------------\n\n"
-            f"Add gochuun carraa badhaasaa keessan dabalaa!"
+           f"📊 Invite Progress: @Digital_Birri\n"
+                f"-----------------------\n"
+                f"👤 User: {first_name}\n"
+                f"👥 Invites: Nama {invite_count} afeertaniittu \n"
+                f"💰 Balance: {balance} ETB\n"
+                f"🚀 Baafachuuf: Dabalataan nama {remaining} afeeraa\n"
+                f"-----------------------\n\n"
+                f"Add gochuun carraa badhaasaa keessan dabalaa!"
         )
 
         await query.answer(f"Kabajamoo {first_name}, maallaqa baafachuuf dabalataan nama {remaining} afeeruu qabdu", show_alert=True)
@@ -201,11 +182,14 @@ class InviteTrackerBot:
             application.add_handler(CallbackQueryHandler(self.handle_key, pattern=r'^key_\d+$'))
 
             logger.info("Bot started successfully!")
+
+            # Run the bot asynchronously, using asyncio.run() in a blocking way
             asyncio.get_event_loop().run_until_complete(application.run_polling(drop_pending_updates=True))
 
         except Exception as e:
             logger.error(f"Failed to start bot: {e}")
 
+# Web server to keep the service running on Render
 @app.route('/')
 def index():
     return "Bot is running!"
@@ -218,9 +202,11 @@ def main():
 
     bot = InviteTrackerBot(TOKEN)
 
+    # Run the bot and the Flask app in the same event loop
     loop = asyncio.get_event_loop()
-    loop.create_task(bot.run())
+    loop.create_task(bot.run())  # Start the bot as a background task
 
+    # Start the Flask app (it will run in the main thread)
     app.run(host='0.0.0.0', port=int(os.getenv('PORT', 5000)))
 
 if __name__ == "__main__":
