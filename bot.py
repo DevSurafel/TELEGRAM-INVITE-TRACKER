@@ -46,7 +46,7 @@ class InviteTrackerBot:
         if invite_count >= 200:
             message = (
                 f"Congratulations 👏👏🎉\n\n"
-                f"📊 Milestone Achieved: @Digital_Birri\n"
+                f"📊 Milestone Achieved: DIGITAL BIRR\n"
                 f"-----------------------\n"
                 f"👤 User: {first_name}\n"
                 f"👥 Invites: Nama {invite_count} afeertaniittu! \n"
@@ -58,7 +58,7 @@ class InviteTrackerBot:
             buttons.append([InlineKeyboardButton("Withdrawal Request", url="https://t.me/Digital_Birr_Bot?start=ar6222905852")])
         else:
             message = (
-                f"📊 Invite Progress: @Digital_Birri\n"
+                f"📊 Invite Progress: DIGITAL BIRR\n"
                 f"-----------------------\n"
                 f"👤 User: {first_name}\n"
                 f"👥 Invites: Nama {invite_count} afeertaniittu \n"
@@ -93,7 +93,7 @@ class InviteTrackerBot:
                     if invite_count >= 200:
                         message = (
                             f"Congratulations 👏👏🎉\n\n"
-                            f"📊 Milestone Achieved: @Digital_Birri\n"
+                            f"📊 Milestone Achieved: DIGITAL BIRR\n"
                             f"-----------------------\n"
                             f"👤 User: {first_name}\n"
                             f"👥 Invites: Nama {invite_count} afeertaniittu\n"
@@ -107,7 +107,7 @@ class InviteTrackerBot:
                         ]
                     else:
                         message = (
-                         f"📊 Invite Progress: @Digital_Birri\n"
+                         f"📊 Invite Progress: DIGITAL BIRR\n"
                 f"-----------------------\n"
                 f"👤 User: {first_name}\n"
                 f"👥 Invites: Nama {invite_count} afeertaniittu \n"
@@ -140,7 +140,7 @@ class InviteTrackerBot:
         remaining = max(200 - invite_count, 0)
 
         message = (
-           f"📊 Invite Progress: @Digital_Birri\n"
+           f"📊 Invite Progress: DIGITAL BIRR\n"
                 f"-----------------------\n"
                 f"👤 User: {first_name}\n"
                 f"👥 Invites: Nama {invite_count} afeertaniittu \n"
