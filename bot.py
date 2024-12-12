@@ -22,9 +22,19 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # Firebase initialization
-cred = credentials.Certificate("firebase_credentials.json")
+cred = credentials.Certificate("path_to_your_firebase_credentials.json")
 firebase_admin.initialize_app(cred)
 db = firestore.client()
+
+# Ensure 'users' collection exists by creating a default document
+def ensure_users_collection():
+    try:
+        users_ref = db.collection('users').document('default')
+        if not users_ref.get().exists:
+            users_ref.set({'created': True})
+            logger.info("Default document added to 'users' collection.")
+    except Exception as e:
+        logger.error(f"Error ensuring users collection exists: {e}")
 
 class InviteTrackerBot:
     def __init__(self, token: str):
@@ -42,8 +52,9 @@ class InviteTrackerBot:
                 'withdrawal_key': None
             })
         
-        invite_count = user_data.to_dict()['invite_count']
-        first_name = user_data.to_dict()['first_name']
+        user_data = user_ref.get().to_dict()
+        invite_count = user_data['invite_count']
+        first_name = user_data['first_name']
         balance = invite_count * 50
         remaining = max(200 - invite_count, 0)
 
@@ -96,22 +107,21 @@ class InviteTrackerBot:
                         'withdrawal_key': None
                     })
                 
-                invite_count = user_data.to_dict()['invite_count']
+                invite_count = user_data.to_dict()['invite_count'] if user_data.exists else 0
                 user_ref.update({'invite_count': invite_count + 1})
-                invite_count += 1
 
-                if invite_count % 10 == 0:
+                if (invite_count + 1) % 10 == 0:
                     first_name = inviter.first_name
-                    balance = invite_count * 50
-                    remaining = max(200 - invite_count, 0)
+                    balance = (invite_count + 1) * 50
+                    remaining = max(200 - (invite_count + 1), 0)
 
-                    if invite_count >= 200:
+                    if (invite_count + 1) >= 200:
                         message = (
                             f"Congratulations 👏👏🎉\n\n"
                             f"📊 Milestone Achieved: @DIGITAL_BIRRI\n"
                             f"-----------------------\n"
                             f"👤 User: {first_name}\n"
-                            f"👥 Invites: Nama {invite_count} afeertaniittu\n"
+                            f"👥 Invites: Nama {(invite_count + 1)} afeertaniittu\n"
                             f"💰 Balance: {balance} ETB\n"
                             f"🚀 Baafachuuf: Baafachuu ni dandeessu! \n"
                             f"-----------------------\n\n"
@@ -125,7 +135,7 @@ class InviteTrackerBot:
                             f"📊 Invite Progress: @DIGITAL_BIRRI\n"
                             f"-----------------------\n"
                             f"👤 User: {first_name}\n"
-                            f"👥 Invites: Nama {invite_count} afeertaniittu \n"
+                            f"👥 Invites: Nama {(invite_count + 1)} afeertaniittu \n"
                             f"💰 Balance: {balance} ETB\n"
                             f"🚀 Baafachuuf: Dabalataan nama {remaining} afeeraa\n"
                             f"-----------------------\n\n"
@@ -140,60 +150,6 @@ class InviteTrackerBot:
             except Exception as e:
                 logger.error(f"Error tracking invite: {e}")
 
-    async def handle_check(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        query = update.callback_query
-        user_id = int(query.data.split('_')[1])
-
-        user_ref = db.collection('users').document(str(user_id))
-        user_data = user_ref.get()
-
-        if not user_data.exists:
-            await query.answer("No invitation data found.")
-            return
-
-        user_data = user_data.to_dict()
-        invite_count = user_data['invite_count']
-        first_name = user_data['first_name']
-        balance = invite_count * 50
-        remaining = max(200 - invite_count, 0)
-
-        message = (
-            f"📊 Invite Progress: @DIGITAL_BIRRI\n"
-            f"-----------------------\n"
-            f"👤 User: {first_name}\n"
-            f"👥 Invites: Nama {invite_count} afeertaniittu \n"
-            f"💰 Balance: {balance} ETB\n"
-            f"🚀 Baafachuuf: Dabalataan nama {remaining} afeeraa\n"
-            f"-----------------------\n\n"
-            f"Add gochuun carraa badhaasaa keessan dabalaa!"
-        )
-
-        await query.answer(f"Kabajamoo {first_name}, maallaqa baafachuuf dabalataan nama {remaining} afeeruu qabdu", show_alert=True)
-
-    async def handle_key(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        query = update.callback_query
-        user_id = int(query.data.split('_')[1])
-
-        user_ref = db.collection('users').document(str(user_id))
-        user_data = user_ref.get()
-
-        if not user_data.exists:
-            await query.answer("No invitation data found.")
-            return
-
-        user_data = user_data.to_dict()
-        invite_count = user_data['invite_count']
-        first_name = user_data['first_name']
-
-        if invite_count >= 200:
-            if not user_data['withdrawal_key']:
-                user_data['withdrawal_key'] = random.randint(100000, 999999)
-                user_ref.update({'withdrawal_key': user_data['withdrawal_key']})
-            withdrawal_key = user_data['withdrawal_key']
-            await query.answer(f"Kabajamoo {first_name}, Lakkoofsi Key🔑 keessanii: 👉{withdrawal_key}", show_alert=True)
-        else:
-            await query.answer(f"Kabajamoo {first_name}, lakkoofsa Key argachuuf yoo xiqqaate nama 200 afeeruu qabdu!", show_alert=True)
-
     def run(self):
         try:
             application = Application.builder().token(self.token).build()
@@ -205,7 +161,9 @@ class InviteTrackerBot:
 
             logger.info("Bot started successfully!")
 
-            # Run the bot asynchronously, using asyncio.run() in a blocking way
+            # Ensure the 'users' collection exists
+            ensure_users_collection()
+
             asyncio.get_event_loop().run_until_complete(application.run_polling(drop_pending_updates=True))
 
         except Exception as e:
