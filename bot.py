@@ -20,23 +20,28 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 class InviteTrackerBot:
-    def __init__(self, token: str, group_id: str):
+    def __init__(self, token: str):
         self.token = token
-        self.group_id = group_id  # Store the group ID
         self.invite_counts: Dict[int, Dict[str, int]] = {}
-        self.is_welcome_sent = False  # Flag to track if the welcome message has been sent
+        self.group_id = None  # Initialize group_id to None
+
+    async def send_welcome_and_get_group_id(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        # Send a welcome message
+        welcome_message = "Welcome to the group! 🎉"
+        await update.message.reply_text(welcome_message)
+
+        # Fetch and store the group ID from the message chat
+        self.group_id = update.message.chat.id
+        logger.info(f"Group ID fetched: {self.group_id}")
 
     async def start(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        # Check if the message is from the specified group
-        if update.message.chat.id != int(self.group_id):
-            return  # Ignore if the message is not from the specified group
+        # Only process the start command
+        if self.group_id is None:
+            await self.send_welcome_and_get_group_id(update, context)
 
-        # Send the welcome message only once after deployment
-        if not self.is_welcome_sent:
-            self.is_welcome_sent = True
-            group_id = update.message.chat.id  # Fetch the group ID
-            logger.info(f"Group ID: {group_id}")  # Log the group ID
-            await update.message.reply_text("Welcome! I am here to track invites.")  # Send a welcome message
+        # Check if the message is from the specified group
+        if update.message.chat.id != self.group_id:
+            return  # Ignore if the message is not from the group
 
         user = update.message.from_user
         if user.id not in self.invite_counts:
@@ -85,7 +90,7 @@ class InviteTrackerBot:
 
     async def track_new_member(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         # Check if the message is from the specified group
-        if update.message.chat.id != int(self.group_id):
+        if update.message.chat.id != self.group_id:
             return  # Ignore if the message is not from the specified group
 
         for new_member in update.message.new_chat_members:
@@ -212,13 +217,12 @@ def index():
     return "Bot is running!"
 
 def main():
-    TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
-    GROUP_ID = os.getenv('GROUP_ID')  # Get the group ID from environment variables
-    if not TOKEN or not GROUP_ID:
-        logger.error("No bot token or group ID provided. Set TELEGRAM_BOT_TOKEN and GROUP_ID environment variables.")
+    TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')  # Get the bot token from environment variables
+    if not TOKEN:
+        logger.error("No bot token provided. Set TELEGRAM_BOT_TOKEN environment variable.")
         return
 
-    bot = InviteTrackerBot(TOKEN, GROUP_ID)
+    bot = InviteTrackerBot(TOKEN)
 
     # Run the bot and the Flask app in the same event loop
     loop = asyncio.get_event_loop()
