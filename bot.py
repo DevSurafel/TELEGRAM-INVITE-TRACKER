@@ -30,7 +30,7 @@ logger = logging.getLogger(__name__)
 def initialize_firebase():
     try:
         firebase_creds = os.getenv('FIREBASE_CREDENTIALS')
-        
+
         if not firebase_creds:
             logger.error("No Firebase credentials found in environment variables.")
             return None
@@ -53,10 +53,10 @@ def initialize_firebase():
         cred = credentials.Certificate(cred_path)
         firebase_admin.initialize_app(cred)
         db = firestore.client()
-        
+
         logger.info("Firebase initialized successfully.")
         return db
-    
+
     except Exception as e:
         logger.error(f"Comprehensive Firebase initialization error: {e}")
         return None
