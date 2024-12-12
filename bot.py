@@ -29,33 +29,27 @@ logger = logging.getLogger(__name__)
 # Firebase initialization function
 def initialize_firebase():
     try:
-        # Try to get Firebase credentials from environment variable
         firebase_creds = os.getenv('FIREBASE_CREDENTIALS')
         
         if not firebase_creds:
             logger.error("No Firebase credentials found in environment variables.")
             return None
 
-        # Try to parse the credentials
         try:
-            # If it's a URL, download the credentials
             if firebase_creds.startswith('http'):
                 response = requests.get(firebase_creds)
                 response.raise_for_status()
                 cred_dict = response.json()
             else:
-                # If it's a JSON string, parse it directly
                 cred_dict = json.loads(firebase_creds)
         except Exception as parsing_error:
             logger.error(f"Error parsing Firebase credentials: {parsing_error}")
             return None
 
-        # Write credentials to a temporary file
         cred_path = '/tmp/firebase_credentials.json'
         with open(cred_path, 'w') as cred_file:
             json.dump(cred_dict, cred_file)
 
-        # Initialize Firebase
         cred = credentials.Certificate(cred_path)
         firebase_admin.initialize_app(cred)
         db = firestore.client()
@@ -116,19 +110,19 @@ class InviteTrackerBot:
                 f"📊 Milestone Achieved: @DIGITAL_BIRRI\n"
                 f"-----------------------\n"
                 f"👤 User: {first_name}\n"
-                f"👥 Invites: Nama {invite_count} afeertaniittu! \n"
+                f"👥 Invites: {invite_count} afeertaniittu! \n"
                 f"💰 Balance: {balance} ETB\n"
                 f"🚀 Baafachuuf: Baafachuu ni dandeessu! \n"
                 f"-----------------------\n\n"
                 f"Baafachuuf kan jedhu tuquun baafadhaa 👇"
             )
-            buttons.append([InlineKeyboardButton("Withdrawal Request", url="https://t.me/Digital_Birr_Bot?start=ar6222905852")])
+            buttons.append([InlineKeyboardButton("Withdrawal Request", callback_data=f"withdraw_{user.id}")])
         else:
             message = (
                 f"📊 Invite Progress: @DIGITAL_BIRRI\n"
                 f"-----------------------\n"
                 f"👤 User: {first_name}\n"
-                f"👥 Invites: Nama {invite_count} afeertaniittu \n"
+                f"👥 Invites: {invite_count} afeertaniittu \n"
                 f"💰 Balance: {balance} ETB\n"
                 f"🚀 Baafachuuf: Dabalataan nama {remaining} afeeraa\n"
                 f"-----------------------\n\n"
@@ -159,6 +153,15 @@ class InviteTrackerBot:
         query = update.callback_query
         await query.answer()
         message = "This is the withdrawal key section. Please proceed with the next steps."
+        await query.edit_message_text(message)
+
+    async def handle_withdrawal_request(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        query = update.callback_query
+        await query.answer()
+        user_id = query.data.split('_')[1]
+
+        # Withdrawal request logic
+        message = "To proceed with withdrawal, please follow the instructions given on the website."
         await query.edit_message_text(message)
 
     async def track_new_member(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -192,6 +195,7 @@ class InviteTrackerBot:
             application.add_handler(MessageHandler(filters.StatusUpdate.NEW_CHAT_MEMBERS, self.track_new_member))
             application.add_handler(CallbackQueryHandler(self.handle_check, pattern=r'^check_\d+$'))
             application.add_handler(CallbackQueryHandler(self.handle_key, pattern=r'^key_\d+$'))
+            application.add_handler(CallbackQueryHandler(self.handle_withdrawal_request, pattern=r'^withdraw_\d+$'))
 
             logger.info("Bot started successfully!")
 
