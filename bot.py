@@ -1,6 +1,8 @@
 import os
 import logging
 import asyncio
+import json
+import requests
 from typing import Dict
 import firebase_admin
 from firebase_admin import credentials, firestore
@@ -24,19 +26,51 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Firebase initialization
-cred_path = os.getenv('FIREBASE_CREDENTIALS')
-if not cred_path:
-    logger.error("Firebase credentials path is not set in the environment variables.")
-    exit(1)
+# Firebase initialization function
+def initialize_firebase():
+    try:
+        # Try to get Firebase credentials from environment variable
+        firebase_creds = os.getenv('FIREBASE_CREDENTIALS')
+        
+        if not firebase_creds:
+            logger.error("No Firebase credentials found in environment variables.")
+            return None
 
-try:
-    cred = credentials.Certificate(cred_path)
-    firebase_admin.initialize_app(cred)
-    db = firestore.client()
-    logger.info("Firebase initialized successfully.")
-except Exception as e:
-    logger.error(f"Error initializing Firebase: {e}")
+        # Try to parse the credentials
+        try:
+            # If it's a URL, download the credentials
+            if firebase_creds.startswith('http'):
+                response = requests.get(firebase_creds)
+                response.raise_for_status()
+                cred_dict = response.json()
+            else:
+                # If it's a JSON string, parse it directly
+                cred_dict = json.loads(firebase_creds)
+        except Exception as parsing_error:
+            logger.error(f"Error parsing Firebase credentials: {parsing_error}")
+            return None
+
+        # Write credentials to a temporary file
+        cred_path = '/tmp/firebase_credentials.json'
+        with open(cred_path, 'w') as cred_file:
+            json.dump(cred_dict, cred_file)
+
+        # Initialize Firebase
+        cred = credentials.Certificate(cred_path)
+        firebase_admin.initialize_app(cred)
+        db = firestore.client()
+        
+        logger.info("Firebase initialized successfully.")
+        return db
+    
+    except Exception as e:
+        logger.error(f"Comprehensive Firebase initialization error: {e}")
+        return None
+
+# Initialize Firebase database
+db = initialize_firebase()
+if db is None:
+    logger.error("Failed to initialize Firebase. Exiting.")
     exit(1)
 
 # Ensure 'users' collection exists
