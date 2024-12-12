@@ -82,6 +82,7 @@ class InviteTrackerBot:
                         'first_name': inviter.first_name,
                         'withdrawal_key': None
                     }
+                # Increment the invite count for the inviter
                 self.invite_counts[inviter.id]['invite_count'] += 1
                 invite_count = self.invite_counts[inviter.id]['invite_count']
 
@@ -107,14 +108,14 @@ class InviteTrackerBot:
                         ]
                     else:
                         message = (
-                         f"📊 Invite Progress: @DIGITAL_BIRRI\n"
-                f"-----------------------\n"
-                f"👤 User: {first_name}\n"
-                f"👥 Invites: Nama {invite_count} afeertaniittu \n"
-                f"💰 Balance: {balance} ETB\n"
-                f"🚀 Baafachuuf: Dabalataan nama {remaining} afeeraa\n"
-                f"-----------------------\n\n"
-                f"Add gochuun carraa badhaasaa keessan dabalaa!"
+                            f"📊 Invite Progress: @DIGITAL_BIRRI\n"
+                            f"-----------------------\n"
+                            f"👤 User: {first_name}\n"
+                            f"👥 Invites: Nama {invite_count} afeertaniittu \n"
+                            f"💰 Balance: {balance} ETB\n"
+                            f"🚀 Baafachuuf: Dabalataan nama {remaining} afeeraa\n"
+                            f"-----------------------\n\n"
+                            f"Add gochuun carraa badhaasaa keessan dabalaa!"
                         )
                         buttons = [
                             [InlineKeyboardButton("Check", callback_data=f"check_{inviter.id}")]
@@ -140,14 +141,14 @@ class InviteTrackerBot:
         remaining = max(200 - invite_count, 0)
 
         message = (
-           f"📊 Invite Progress: @DIGITAL_BIRRI\n"
-                f"-----------------------\n"
-                f"👤 User: {first_name}\n"
-                f"👥 Invites: Nama {invite_count} afeertaniittu \n"
-                f"💰 Balance: {balance} ETB\n"
-                f"🚀 Baafachuuf: Dabalataan nama {remaining} afeeraa\n"
-                f"-----------------------\n\n"
-                f"Add gochuun carraa badhaasaa keessan dabalaa!"
+            f"📊 Invite Progress: @DIGITAL_BIRRI\n"
+            f"-----------------------\n"
+            f"👤 User: {first_name}\n"
+            f"👥 Invites: Nama {invite_count} afeertaniittu \n"
+            f"💰 Balance: {balance} ETB\n"
+            f"🚀 Baafachuuf: Dabalataan nama {remaining} afeeraa\n"
+            f"-----------------------\n\n"
+            f"Add gochuun carraa badhaasaa keessan dabalaa!"
         )
 
         await query.answer(f"Kabajamoo {first_name}, maallaqa baafachuuf dabalataan nama {remaining} afeeruu qabdu", show_alert=True)
