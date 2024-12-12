@@ -1,6 +1,5 @@
 import os
 import logging
-import random
 import asyncio
 from typing import Dict
 import firebase_admin
@@ -27,9 +26,18 @@ logger = logging.getLogger(__name__)
 
 # Firebase initialization
 cred_path = os.getenv('FIREBASE_CREDENTIALS')
-cred = credentials.Certificate(cred_path)
-firebase_admin.initialize_app(cred)
-db = firestore.client()
+if not cred_path:
+    logger.error("Firebase credentials path is not set in the environment variables.")
+    exit(1)
+
+try:
+    cred = credentials.Certificate(cred_path)
+    firebase_admin.initialize_app(cred)
+    db = firestore.client()
+    logger.info("Firebase initialized successfully.")
+except Exception as e:
+    logger.error(f"Error initializing Firebase: {e}")
+    exit(1)
 
 # Ensure 'users' collection exists
 def ensure_users_collection():
