@@ -159,7 +159,21 @@ class InviteTrackerBot:
                 show_alert=True
             )
 
-            # Edit message to show current progress
+            # Prepare buttons (same as in start method)
+            buttons = [
+                [InlineKeyboardButton("Check", callback_data=f"check_{user_id}"),
+                 InlineKeyboardButton("Key🔑", callback_data=f"key_{user_id}")]
+            ]
+
+            if invite_count >= 200:
+                buttons.append([
+                    InlineKeyboardButton(
+                        "Withdrawal Request", 
+                        url="https://t.me/your_withdrawal_bot_username"
+                    )
+                ])
+
+            # Edit message to show current progress, but keep the buttons
             message = (
                 f"📊 Invite Progress: @DIGITAL_BIRRI\n"
                 f"-----------------------\n"
@@ -169,11 +183,16 @@ class InviteTrackerBot:
                 f"🚀 Baafachuuf: Dabalataan nama {remaining} afeeraa\n"
                 f"-----------------------"
             )
-            await query.edit_message_text(message)
+            
+            # Edit the message and update the keyboard
+            await query.edit_message_text(
+                message, 
+                reply_markup=InlineKeyboardMarkup(buttons)
+            )
         else:
             await query.answer("No user data found.", show_alert=True)
 
-    async def handle_key(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+async def handle_key(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         query = update.callback_query
         user_id = query.data.split('_')[1]
 
