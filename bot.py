@@ -70,18 +70,27 @@ class InviteTrackerBot:
 
         await update.message.reply_text(message, reply_markup=InlineKeyboardMarkup(buttons))
 
-    async def track_new_member(self, update: ChatMemberUpdated, context: ContextTypes.DEFAULT_TYPE) -> None:
+    async def track_new_member(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         logger.info(f"Chat member updated in chat {update.effective_chat.id}")
         logger.info(f"Update: {update}")
 
-        new_member = update.new_chat_member.user
-        inviter = update.from_user
-        chat_id = update.effective_chat.id
+        if update.my_chat_member:
+            chat_member_update = update.my_chat_member
+        elif update.chat_member:
+            chat_member_update = update.chat_member
+        else:
+            logger.error("Update does not contain member status change.")
+            return
+
+        new_member = chat_member_update.new_chat_member.user
+        old_member = chat_member_update.old_chat_member.user
+        inviter = chat_member_update.from_user
+        chat_id = chat_member_update.chat.id
 
         logger.debug(f"Chat ID: {chat_id}, Inviter: {inviter.id}, New Member: {new_member.id}")
 
         # Check if the user has joined the chat
-        if update.new_chat_member.status == "member" and update.old_chat_member.status != "member":
+        if chat_member_update.new_chat_member.status == "member" and chat_member_update.old_chat_member.status != "member":
             if inviter.id == new_member.id:
                 logger.debug("Inviter is the new member, skipping...")
                 return
