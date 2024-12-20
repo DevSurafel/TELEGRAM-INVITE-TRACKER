@@ -75,17 +75,17 @@ class InviteTrackerBot:
         logger.info(f"Chat member updated in chat {update.effective_chat.id}")
         logger.info(f"Update: {update}")
 
+        # Check if the update is for the specified supergroup
+        if update.effective_chat.id != self.supergroup_id:
+            logger.info(f"Ignoring update from chat {update.effective_chat.id}")
+            return
+
         if update.my_chat_member:
             chat_member_update = update.my_chat_member
         elif update.chat_member:
             chat_member_update = update.chat_member
         else:
             logger.error("Update does not contain member status change.")
-            return
-
-        # Ensure the update is from the specified supergroup
-        if chat_member_update.chat.id != self.supergroup_id:
-            logger.info(f"Ignoring update from chat {chat_member_update.chat.id}")
             return
 
         new_member = chat_member_update.new_chat_member.user
