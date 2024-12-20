@@ -76,8 +76,9 @@ class InviteTrackerBot:
 
         new_member = update.new_chat_member.user
         inviter = update.from_user
+        chat_id = update.effective_chat.id
 
-        logger.debug(f"Inviter: {inviter.id}, New Member: {new_member.id}")
+        logger.debug(f"Chat ID: {chat_id}, Inviter: {inviter.id}, New Member: {new_member.id}")
 
         # Check if the user has joined the chat
         if update.new_chat_member.status == "member" and update.old_chat_member.status != "member":
@@ -131,7 +132,7 @@ class InviteTrackerBot:
                         [InlineKeyboardButton("Check", callback_data=f"check_{inviter.id}")]
                     ]
 
-                await context.bot.send_message(chat_id=update.effective_chat.id, text=message, reply_markup=InlineKeyboardMarkup(buttons))
+                await context.bot.send_message(chat_id=chat_id, text=message, reply_markup=InlineKeyboardMarkup(buttons))
 
     async def handle_check(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         query = update.callback_query
