@@ -6,8 +6,7 @@ import asyncio
 from flask import Flask
 from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton, ChatMemberUpdated
 from telegram.ext import (
-    Application, CommandHandler, MessageHandler,
-    CallbackQueryHandler, ChatMemberHandler, filters, ContextTypes
+    Application, CommandHandler, CallbackQueryHandler, ChatMemberHandler, ContextTypes
 )
 
 # Initialize Flask app
@@ -72,6 +71,8 @@ class InviteTrackerBot:
 
     async def track_new_member(self, update: ChatMemberUpdated, context: ContextTypes.DEFAULT_TYPE) -> None:
         logger.info(f"Chat member updated in chat {update.effective_chat.id}")
+        logger.info(f"Update: {update}")
+
         new_member = update.new_chat_member.user
         inviter = update.from_user
 
