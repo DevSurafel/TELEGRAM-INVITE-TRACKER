@@ -6,7 +6,7 @@ import asyncio
 from flask import Flask
 from telegram import Update, ChatMemberUpdated
 from telegram.ext import (
-     Application, CommandHandler, CallbackQueryHandler, ChatMemberHandler, ContextTypes
+    Application, CommandHandler, CallbackQueryHandler, ChatMemberHandler, ContextTypes
 )
 from telegram import InlineKeyboardMarkup, InlineKeyboardButton
 
@@ -20,8 +20,9 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 class InviteTrackerBot:
-    def __init__(self, token: str):
+    def __init__(self, token: str, supergroup_id: int):
         self.token = token
+        self.supergroup_id = supergroup_id
         self.invite_counts: Dict[int, Dict[str, int]] = {}
 
     async def start(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -80,6 +81,11 @@ class InviteTrackerBot:
             chat_member_update = update.chat_member
         else:
             logger.error("Update does not contain member status change.")
+            return
+
+        # Ensure the update is from the specified supergroup
+        if chat_member_update.chat.id != self.supergroup_id:
+            logger.info(f"Ignoring update from chat {chat_member_update.chat.id}")
             return
 
         new_member = chat_member_update.new_chat_member.user
@@ -217,11 +223,15 @@ def index():
 
 def main():
     TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
+    SUPERGROUP_ID = int(os.getenv('SUPERGROUP_ID'))
     if not TOKEN:
         logger.error("No bot token provided. Set TELEGRAM_BOT_TOKEN environment variable.")
         return
+    if not SUPERGROUP_ID:
+        logger.error("No supergroup ID provided. Set SUPERGROUP_ID environment variable.")
+        return
 
-    bot = InviteTrackerBot(TOKEN)
+    bot = InviteTrackerBot(TOKEN, SUPERGROUP_ID)
 
     # Run the bot and the Flask app in the same event loop
     loop = asyncio.get_event_loop()
