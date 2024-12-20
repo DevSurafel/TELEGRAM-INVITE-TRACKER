@@ -183,7 +183,6 @@ class InviteTrackerBot:
             application = Application.builder().token(self.token).build()
 
             application.add_handler(CommandHandler("start", self.start))
-            application.add_handler(MessageHandler(filters.StatusUpdate.NEW_CHAT_MEMBERS, self.track_new_member))
             application.add_handler(ChatMemberHandler(self.track_new_member, ChatMemberUpdated))
             application.add_handler(CallbackQueryHandler(self.handle_check, pattern=r'^check_\d+$'))
             application.add_handler(CallbackQueryHandler(self.handle_key, pattern=r'^key_\d+$'))
