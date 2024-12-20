@@ -107,14 +107,14 @@ class InviteTrackerBot:
                         ]
                     else:
                         message = (
-                         f"📊 Invite Progress: @DIGITAL_BIRRI\n"
-                f"-----------------------\n"
-                f"👤 User: {first_name}\n"
-                f"👥 Invites: Nama {invite_count} afeertaniittu \n"
-                f"💰 Balance: {balance} ETB\n"
-                f"🚀 Baafachuuf: Dabalataan nama {remaining} afeeraa\n"
-                f"-----------------------\n\n"
-                f"Add gochuun carraa badhaasaa keessan dabalaa!"
+                            f"📊 Invite Progress: @DIGITAL_BIRRI\n"
+                            f"-----------------------\n"
+                            f"👤 User: {first_name}\n"
+                            f"👥 Invites: Nama {invite_count} afeertaniittu \n"
+                            f"💰 Balance: {balance} ETB\n"
+                            f"🚀 Baafachuuf: Dabalataan nama {remaining} afeeraa\n"
+                            f"-----------------------\n\n"
+                            f"Add gochuun carraa badhaasaa keessan dabalaa!"
                         )
                         buttons = [
                             [InlineKeyboardButton("Check", callback_data=f"check_{inviter.id}")]
@@ -140,14 +140,14 @@ class InviteTrackerBot:
         remaining = max(200 - invite_count, 0)
 
         message = (
-           f"📊 Invite Progress: @DIGITAL_BIRRI\n"
-                f"-----------------------\n"
-                f"👤 User: {first_name}\n"
-                f"👥 Invites: Nama {invite_count} afeertaniittu \n"
-                f"💰 Balance: {balance} ETB\n"
-                f"🚀 Baafachuuf: Dabalataan nama {remaining} afeeraa\n"
-                f"-----------------------\n\n"
-                f"Add gochuun carraa badhaasaa keessan dabalaa!"
+            f"📊 Invite Progress: @DIGITAL_BIRRI\n"
+            f"-----------------------\n"
+            f"👤 User: {first_name}\n"
+            f"👥 Invites: Nama {invite_count} afeertaniittu \n"
+            f"💰 Balance: {balance} ETB\n"
+            f"🚀 Baafachuuf: Dabalataan nama {remaining} afeeraa\n"
+            f"-----------------------\n\n"
+            f"Add gochuun carraa badhaasaa keessan dabalaa!"
         )
 
         await query.answer(f"Kabajamoo {first_name}, maallaqa baafachuuf dabalataan nama {remaining} afeeruu qabdu", show_alert=True)
@@ -183,8 +183,8 @@ class InviteTrackerBot:
 
             logger.info("Bot started successfully!")
 
-            # Run the bot asynchronously, using asyncio.run() in a blocking way
-            asyncio.get_event_loop().run_until_complete(application.run_polling(drop_pending_updates=True))
+            # Run the bot asynchronously
+            asyncio.run(application.run_polling(drop_pending_updates=True))
 
         except Exception as e:
             logger.error(f"Failed to start bot: {e}")
