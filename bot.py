@@ -23,6 +23,7 @@ class InviteTrackerBot:
     def __init__(self, token: str):
         self.token = token
         self.invite_counts: Dict[int, Dict[str, int]] = {}
+        self.offset = None
 
     async def start(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         user = update.message.from_user
@@ -189,8 +190,11 @@ class InviteTrackerBot:
 
             logger.info("Bot started successfully!")
 
+            # Ensure the bot receives all relevant update types
+            allowed_updates = ["message", "edited_channel_post", "callback_query", "chat_member", "my_chat_member"]
+
             # Run the bot asynchronously
-            asyncio.run(application.run_polling(drop_pending_updates=True))
+            asyncio.run(application.run_polling(drop_pending_updates=True, allowed_updates=allowed_updates))
 
         except Exception as e:
             logger.error(f"Failed to start bot: {e}")
