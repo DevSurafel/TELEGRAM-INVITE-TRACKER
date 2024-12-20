@@ -71,12 +71,16 @@ class InviteTrackerBot:
         await update.message.reply_text(message, reply_markup=InlineKeyboardMarkup(buttons))
 
     async def track_new_member(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        logger.info(f"New members detected in chat {update.effective_chat.id}")
         for new_member in update.message.new_chat_members:
             try:
                 inviter = update.message.from_user
+                logger.debug(f"Inviter: {inviter.id}, New Member: {new_member.id}")
                 if inviter.id == new_member.id:
+                    logger.debug("Inviter is the new member, skipping...")
                     continue
                 if inviter.id not in self.invite_counts:
+                    logger.debug(f"Initializing invite count for user {inviter.id}")
                     self.invite_counts[inviter.id] = {
                         'invite_count': 0,
                         'first_name': inviter.first_name,
@@ -84,6 +88,8 @@ class InviteTrackerBot:
                     }
                 self.invite_counts[inviter.id]['invite_count'] += 1
                 invite_count = self.invite_counts[inviter.id]['invite_count']
+
+                logger.info(f"User {inviter.id} invited member {new_member.id}. Total invites: {invite_count}")
 
                 if invite_count % 10 == 0:
                     first_name = self.invite_counts[inviter.id]['first_name']
