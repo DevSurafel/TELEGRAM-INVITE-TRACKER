@@ -6,7 +6,7 @@ import asyncio
 from flask import Flask
 from telegram import Update, ChatMemberUpdated
 from telegram.ext import (
-    Application, CommandHandler, CallbackQueryHandler, ChatMemberHandler, ContextTypes
+     Application, CommandHandler, CallbackQueryHandler, ChatMemberHandler, ContextTypes
 )
 from telegram import InlineKeyboardMarkup, InlineKeyboardButton
 
