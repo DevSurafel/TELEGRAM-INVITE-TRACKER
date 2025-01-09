@@ -11,7 +11,7 @@ from telegram.ext import (
 from telegram import InlineKeyboardMarkup, InlineKeyboardButton
 
  
-# Initialize Flask app
+#Initialize Flask app
 app = Flask(__name__)
 
 logging.basicConfig(
