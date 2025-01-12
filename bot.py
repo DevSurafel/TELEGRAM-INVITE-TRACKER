@@ -217,7 +217,6 @@ class InviteTrackerBot:
         except Exception as e:
             logger.error(f"Failed to start bot: {e}")
 
-# Web server to keep the service running on Render
 @app.route('/')
 def index():
     return "Bot is running!"
