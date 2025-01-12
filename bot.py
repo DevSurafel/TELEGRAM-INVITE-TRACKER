@@ -234,7 +234,6 @@ def main():
 
     bot = InviteTrackerBot(TOKEN, SUPERGROUP_ID)
 
-    # Run the bot and the Flask app in the same event loop
     loop = asyncio.get_event_loop()
     loop.create_task(bot.run())  # Start the bot as a background task
 
