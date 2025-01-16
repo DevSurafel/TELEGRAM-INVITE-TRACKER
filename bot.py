@@ -9,7 +9,6 @@ from telegram.ext import (
     Application, CommandHandler, CallbackQueryHandler, ChatMemberHandler, ContextTypes
 )
 from telegram import InlineKeyboardMarkup, InlineKeyboardButton
-
         
  #Initialize Flask app
 app = Flask(__name__)
