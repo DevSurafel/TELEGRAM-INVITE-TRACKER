@@ -22,7 +22,8 @@ logger = logging.getLogger(__name__)
 class InviteTrackerBot:
     def __init__(self, token: str):
         self.token = token
-        self.invite_counts: Dict[int, Dict[str, int]] = {}
+        self.invite_tokens = {}  # {inviter_id: {token: used_status}}
+        self.invite_counts = {}  # {user_id: {'invite_count': count, 'first_name': name, 'withdrawal_key': key}}
 
     async def start(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         user = update.message.from_user
@@ -32,79 +33,73 @@ class InviteTrackerBot:
                 'first_name': user.first_name,
                 'withdrawal_key': None
             }
-        invite_count = self.invite_counts[user.id]['invite_count']
 
         buttons = [
-            [InlineKeyboardButton("Check", callback_data=f"check_{user.id}"),
+            [InlineKeyboardButton("Generate Invite Token", callback_data=f"generate_token_{user.id}"),
+             InlineKeyboardButton("Check", callback_data=f"check_{user.id}"),
              InlineKeyboardButton("Key🔑", callback_data=f"key_{user.id}")]
         ]
+        await update.message.reply_text("Welcome! Here you can manage your invites and check your progress.", reply_markup=InlineKeyboardMarkup(buttons))
 
-        first_name = self.invite_counts[user.id]['first_name']
-        balance = invite_count * 50
-        remaining = max(4 - invite_count, 0)
+    async def generate_invite_token(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        user = update.effective_user
+        token = random.randint(100000, 999999)  # Generate a unique token
+        if user.id not in self.invite_tokens:
+            self.invite_tokens[user.id] = {}
+        self.invite_tokens[user.id][token] = False  # Mark token as unused
 
-        if invite_count >= 4:
-            message = (
-                f"Congratulations 👏👏🎉\n\n"
-                f"📊 Milestone Achieved: @DIGITAL_BIRRI\n"
-                f"-----------------------\n"
-                f"👤 User: {first_name}\n"
-                f"👥 Invites: Nama {invite_count} afeertaniittu! \n"
-                f"💰 Balance: {balance} ETB\n"
-                f"🚀 Baafachuuf: Baafachuu ni dandeessu! \n"
-                f"-----------------------\n\n"
-                f"Baafachuuf kan jedhu tuquun baafadhaa 👇"
-            )
-            buttons.append([InlineKeyboardButton("Withdrawal Request", url="https://t.me/Digital_Birr_Bot?start=ar6222905852")])
+        await update.message.reply_text(
+            f"Your invite token for your friend is: {token}\n"
+            "Ask your friend to use this token when joining the group.",
+            reply_markup=InlineKeyboardMarkup([
+                [InlineKeyboardButton("Generate Another Token", callback_data=f"generate_token_{user.id}")]
+            ])
+        )
+
+    async def join_group(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        if context.args:
+            token = int(context.args[0])
+            matched = False
+            for inviter_id, tokens in self.invite_tokens.items():
+                if token in tokens and not tokens[token]:
+                    tokens[token] = True  # Mark token as used
+                    await self.update_invite_count_by_id(inviter_id, context)
+                    await update.message.reply_text("You've successfully joined the group! Welcome!")
+                    matched = True
+                    break
+            if not matched:
+                await update.message.reply_text("Invalid or already used token.")
         else:
-            message = (
-                f"📊 Invite Progress: @DIGITAL_BIRRI\n"
-                f"-----------------------\n"
-                f"👤 User: {first_name}\n"
-                f"👥 Invites: Nama {invite_count} afeertaniittu \n"
-                f"💰 Balance: {balance} ETB\n"
-                f"🚀 Baafachuuf: Dabalataan nama {remaining} afeeraa\n"
-                f"-----------------------\n\n"
-                f"Add gochuun carraa badhaasaa keessan dabalaa!"
-            )
+            await update.message.reply_text("Please provide your invite token. Example: /join 123456")
 
-        await update.message.reply_text(message, reply_markup=InlineKeyboardMarkup(buttons))
-
-    async def track_new_member(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        inviter = update.message.from_user
-        for new_member in update.message.new_chat_members:
-            if inviter.id == new_member.id:
-                continue  # Don't count if the user invited themselves
-            await self.update_invite_count(inviter, context)
-
-    async def update_invite_count(self, inviter, context: ContextTypes.DEFAULT_TYPE):
-        inviter_id = inviter.id
+    async def update_invite_count_by_id(self, inviter_id, context: ContextTypes.DEFAULT_TYPE):
         if inviter_id not in self.invite_counts:
+            user = await context.bot.get_chat_member(context.chat_id, inviter_id)
             self.invite_counts[inviter_id] = {
                 'invite_count': 0,
-                'first_name': inviter.first_name,
+                'first_name': user.user.first_name,
                 'withdrawal_key': None
             }
         self.invite_counts[inviter_id]['invite_count'] += 1
         invite_count = self.invite_counts[inviter_id]['invite_count']
-
-        if invite_count % 2 == 0:  # Every 2 invites, send a message
-            message = f"Use /claim to claim your reward for inviting {invite_count} members!"
+        
+        if invite_count % 2 == 0:  # Every 2 invites, notify the inviter
+            message = f"Congratulations! You've invited {invite_count} members. Use /claim to get your reward!"
             await context.bot.send_message(chat_id=inviter_id, text=message)
 
     async def claim_invite(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        user = update.message.from_user
+        user = update.effective_user
         if user.id in self.invite_counts:
             invite_count = self.invite_counts[user.id]['invite_count']
-            if invite_count > 0:  # Only allow claiming if there are invites to claim
-                # Here we don't increment invite_count, we just inform the user
+            if invite_count > 0:
                 balance = invite_count * 50
                 message = f"You have claimed your reward for {invite_count} invites. Your balance is now {balance} ETB."
+                self.invite_counts[user.id]['invite_count'] = 0  # Reset invite count after claim
                 await update.message.reply_text(message)
             else:
                 await update.message.reply_text("You have no invites to claim.")
         else:
-            await update.message.reply_text("You have no invitation data. Please start by inviting members.")
+            await update.message.reply_text("You have no invitation data.")
 
     async def handle_check(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         query = update.callback_query
@@ -158,18 +153,30 @@ class InviteTrackerBot:
             application = Application.builder().token(self.token).build()
 
             application.add_handler(CommandHandler("start", self.start))
-            application.add_handler(MessageHandler(filters.StatusUpdate.NEW_CHAT_MEMBERS, self.track_new_member))
+            application.add_handler(CommandHandler("generate_token", self.generate_invite_token))
+            application.add_handler(CommandHandler("join", self.join_group))
             application.add_handler(CommandHandler("claim", self.claim_invite))
             application.add_handler(CallbackQueryHandler(self.handle_check, pattern=r'^check_\d+$'))
             application.add_handler(CallbackQueryHandler(self.handle_key, pattern=r'^key_\d+$'))
+            application.add_handler(CallbackQueryHandler(self.generate_invite_token, pattern=r'^generate_token_\d+$'))
 
             logger.info("Bot started successfully!")
 
-            # Run the bot asynchronously, using asyncio.run() in a blocking way
-            asyncio.run(application.run_polling(drop_pending_updates=True))
+            # Send a message to confirm bot is operational in the group
+            asyncio.create_task(self.send_startup_message())
 
+            # Run the bot asynchronously
+            asyncio.run(application.run_polling(drop_pending_updates=True))
         except Exception as e:
             logger.error(f"Failed to start bot: {e}")
+
+    async def send_startup_message(self):
+        """Send a message to the group to confirm the bot is operational."""
+        try:
+            # Replace 'GROUP_CHAT_ID' with the actual chat ID of the group
+            await self.application.bot.send_message(chat_id='-1002033347065', text="Bot has started and is now operational!")
+        except Exception as e:
+            logger.error(f"Failed to send startup message: {e}")
 
 # Web server to keep the service running on Render
 @app.route('/')
