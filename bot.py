@@ -2,15 +2,8 @@ import os
 import logging
 import random
 from typing import Dict
-import asyncio
-from flask import Flask
-from telegram import Update, ChatMemberUpdated
-from telegram.ext import (
-    Application, CommandHandler, CallbackQueryHandler, ChatMemberHandler, ContextTypes
-)
-from telegram import InlineKeyboardMarkup, InlineKeyboardButton
-
-app = Flask(__name__)
+from telegram import Update, ChatMemberUpdated, InlineKeyboardMarkup, InlineKeyboardButton
+from telegram.ext import Application, CommandHandler, CallbackQueryHandler, ChatMemberHandler, ContextTypes
 
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -23,7 +16,6 @@ class InviteTrackerBot:
         self.token = token
         self.supergroup_id = supergroup_id
         self.invite_counts: Dict[int, Dict[str, int]] = {}
-        self.application = None
 
     async def start(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         user = update.message.from_user
@@ -94,6 +86,8 @@ class InviteTrackerBot:
                 }
             self.invite_counts[inviter.id]['invite_count'] += 1
             invite_count = self.invite_counts[inviter.id]['invite_count']
+
+            logger.info(f"User {inviter.id} invited {new_member.id}. Total invites: {invite_count}")
 
             if invite_count % 2 == 0:
                 first_name = self.invite_counts[inviter.id]['first_name']
@@ -180,52 +174,24 @@ class InviteTrackerBot:
                 show_alert=True
             )
 
-    async def initialize(self):
-        self.application = Application.builder().token(self.token).build()
-        
-        self.application.add_handler(CommandHandler("start", self.start))
-        self.application.add_handler(ChatMemberHandler(self.track_new_member, ChatMemberUpdated))
-        self.application.add_handler(CallbackQueryHandler(self.handle_check, pattern=r'^check_\d+$'))
-        self.application.add_handler(CallbackQueryHandler(self.handle_key, pattern=r'^key_\d+$'))
-
-        await self.application.initialize()
-        await self.application.start()
-        await self.application.run_polling(
-            drop_pending_updates=True,
-            allowed_updates=["message", "callback_query", "chat_member", "my_chat_member"]
-        )
-
-    async def stop(self):
-        if self.application:
-            await self.application.stop()
-
-async def run_bot():
+def run_bot():
     TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
     SUPERGROUP_ID = int(os.getenv('SUPERGROUP_ID'))
-    
+
     if not TOKEN or not SUPERGROUP_ID:
         logger.error("Missing required environment variables")
         return
-    
-    bot = InviteTrackerBot(TOKEN, SUPERGROUP_ID)
-    await bot.initialize()
 
-@app.route('/')
-def index():
-    return "Bot is running!"
-
-def main():
-    TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
-    SUPERGROUP_ID = int(os.getenv('SUPERGROUP_ID'))
-    
-    if not TOKEN or not SUPERGROUP_ID:
-        logger.error("Missing required environment variables")
-        return
-    
     bot = InviteTrackerBot(TOKEN, SUPERGROUP_ID)
-    
-    # Run bot in the background
-    asyncio.run(bot.initialize())
+    app = Application.builder().token(TOKEN).build()
+
+    app.add_handler(CommandHandler("start", bot.start))
+    app.add_handler(ChatMemberHandler(bot.track_new_member, ChatMemberUpdated))
+    app.add_handler(CallbackQueryHandler(bot.handle_check, pattern=r'^check_\d+$'))
+    app.add_handler(CallbackQueryHandler(bot.handle_key, pattern=r'^key_\d+$'))
+
+    logger.info("Starting bot...")
+    app.run_polling(allowed_updates=["message", "callback_query", "chat_member", "my_chat_member"])
 
 if __name__ == "__main__":
-    main()
+    run_bot()
