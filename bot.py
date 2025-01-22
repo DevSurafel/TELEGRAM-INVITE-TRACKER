@@ -24,6 +24,7 @@ class InviteTrackerBot:
         self.token = token
         self.invite_tokens = {}  # {inviter_id: {token: used_status}}
         self.invite_counts = {}  # {user_id: {'invite_count': count, 'first_name': name, 'withdrawal_key': key}}
+        self.application = None  # Store application instance for later use
 
     async def start(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         user = update.message.from_user
@@ -148,32 +149,32 @@ class InviteTrackerBot:
         else:
             await query.answer(f"Kabajamoo {first_name}, lakkoofsa Key argachuuf yoo xiqqaate nama 200 afeeruu qabdu!", show_alert=True)
 
-    def run(self):
+    async def run(self):
         try:
-            application = Application.builder().token(self.token).build()
+            self.application = Application.builder().token(self.token).build()
 
-            application.add_handler(CommandHandler("start", self.start))
-            application.add_handler(CommandHandler("generate_token", self.generate_invite_token))
-            application.add_handler(CommandHandler("join", self.join_group))
-            application.add_handler(CommandHandler("claim", self.claim_invite))
-            application.add_handler(CallbackQueryHandler(self.handle_check, pattern=r'^check_\d+$'))
-            application.add_handler(CallbackQueryHandler(self.handle_key, pattern=r'^key_\d+$'))
-            application.add_handler(CallbackQueryHandler(self.generate_invite_token, pattern=r'^generate_token_\d+$'))
+            self.application.add_handler(CommandHandler("start", self.start))
+            self.application.add_handler(CommandHandler("generate_token", self.generate_invite_token))
+            self.application.add_handler(CommandHandler("join", self.join_group))
+            self.application.add_handler(CommandHandler("claim", self.claim_invite))
+            self.application.add_handler(CallbackQueryHandler(self.handle_check, pattern=r'^check_\d+$'))
+            self.application.add_handler(CallbackQueryHandler(self.handle_key, pattern=r'^key_\d+$'))
+            self.application.add_handler(CallbackQueryHandler(self.generate_invite_token, pattern=r'^generate_token_\d+$'))
 
             logger.info("Bot started successfully!")
 
             # Send a message to confirm bot is operational in the group
-            asyncio.create_task(self.send_startup_message())
+            await self.send_startup_message()
 
             # Run the bot asynchronously
-            asyncio.run(application.run_polling(drop_pending_updates=True))
+            await self.application.run_polling(drop_pending_updates=True)
         except Exception as e:
             logger.error(f"Failed to start bot: {e}")
 
     async def send_startup_message(self):
         """Send a message to the group to confirm the bot is operational."""
         try:
-            # Replace 'GROUP_CHAT_ID' with the actual chat ID of the group
+            # Replace '-1002033347065' with the actual chat ID of the group
             await self.application.bot.send_message(chat_id='-1002033347065', text="Bot has started and is now operational!")
         except Exception as e:
             logger.error(f"Failed to send startup message: {e}")
