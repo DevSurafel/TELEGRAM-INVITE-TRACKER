@@ -71,37 +71,41 @@ class InviteTrackerBot:
         await update.message.reply_text(message, reply_markup=InlineKeyboardMarkup(buttons))
 
     async def track_new_member(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        logger.info(f"Track new member update: {update}")
         if update.message:
             for new_member in update.message.new_chat_members:
                 try:
                     inviter = update.message.from_user
                     if inviter.id == new_member.id:
                         continue
-                    self.update_invite_count(inviter, new_member)
+                    logger.info(f"New member in normal group by {inviter.id}: {new_member.id}")
+                    await self.update_invite_count(inviter, new_member, context)
                 except Exception as e:
                     logger.error(f"Error tracking invite in normal group: {e}")
         elif update.my_chat_member:
-            # For supergroups, this will be triggered
             new_member = update.my_chat_member.new_chat_member.user
             try:
-                # Assuming the inviter is the bot itself for supergroups due to lack of direct inviter info
-                self.update_invite_count(context.bot, new_member)
+                # In supergroups, we don't know the inviter directly; this is a placeholder
+                logger.info(f"New member in supergroup: {new_member.id}")
+                # Assuming bot is inviter is not ideal; might need another tracking method
+                await self.update_invite_count(context.bot, new_member, context)
             except Exception as e:
                 logger.error(f"Error tracking invite in supergroup: {e}")
 
-    def update_invite_count(self, inviter, new_member):
-        if inviter.id not in self.invite_counts:
-            self.invite_counts[inviter.id] = {
+    async def update_invite_count(self, inviter, new_member, context: ContextTypes.DEFAULT_TYPE):
+        inviter_id = inviter.id if hasattr(inviter, 'id') else context.bot.id
+        if inviter_id not in self.invite_counts:
+            self.invite_counts[inviter_id] = {
                 'invite_count': 0,
                 'first_name': inviter.first_name if hasattr(inviter, 'first_name') else "Bot",
                 'withdrawal_key': None
             }
         # Increment the invite count for the inviter
-        self.invite_counts[inviter.id]['invite_count'] += 1
-        invite_count = self.invite_counts[inviter.id]['invite_count']
+        self.invite_counts[inviter_id]['invite_count'] += 1
+        invite_count = self.invite_counts[inviter_id]['invite_count']
 
         if invite_count % 2 == 0:
-            first_name = self.invite_counts[inviter.id]['first_name']
+            first_name = self.invite_counts[inviter_id]['first_name']
             balance = invite_count * 50
             remaining = max(4 - invite_count, 0)
 
@@ -132,10 +136,13 @@ class InviteTrackerBot:
                     f"Add gochuun carraa badhaasaa keessan dabalaa!"
                 )
                 buttons = [
-                    [InlineKeyboardButton("Check", callback_data=f"check_{inviter.id}")]
+                    [InlineKeyboardButton("Check", callback_data=f"check_{inviter_id}")]
                 ]
-            # Here, you would normally send this message, but for now, we'll just log it due to context issues
-            logger.info(f"Would send: {message}")
+            try:
+                await context.bot.send_message(chat_id=inviter_id, text=message, reply_markup=InlineKeyboardMarkup(buttons))
+                logger.info(f"Message sent to {inviter_id}")
+            except Exception as e:
+                logger.error(f"Failed to send message: {e}")
 
     async def handle_check(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         query = update.callback_query
@@ -197,7 +204,7 @@ class InviteTrackerBot:
             logger.info("Bot started successfully!")
 
             # Run the bot asynchronously, using asyncio.run() in a blocking way
-            asyncio.get_event_loop().run_until_complete(application.run_polling(drop_pending_updates=True))
+            asyncio.run(application.run_polling(drop_pending_updates=True))
 
         except Exception as e:
             logger.error(f"Failed to start bot: {e}")
@@ -214,13 +221,15 @@ def main():
         return
 
     bot = InviteTrackerBot(TOKEN)
-
-    # Run the bot and the Flask app in the same event loop
-    loop = asyncio.get_event_loop()
-    loop.create_task(bot.run())  # Start the bot as a background task
-
-    # Start the Flask app (it will run in the main thread)
-    app.run(host='0.0.0.0', port=int(os.getenv('PORT', 5000)))
+    asyncio.run(bot.run())
 
 if __name__ == "__main__":
+    import threading
+
+    def run_flask():
+        app.run(host='0.0.0.0', port=int(os.getenv('PORT', 5000)))
+
+    flask_thread = threading.Thread(target=run_flask)
+    flask_thread.start()
+
     main()
