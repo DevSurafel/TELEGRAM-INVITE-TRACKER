@@ -7,7 +7,7 @@ from flask import Flask
 from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton
 from telegram.ext import (
     Application, CommandHandler, MessageHandler,
-    CallbackQueryHandler, filters, ContextTypes, ChatMemberHandler
+    CallbackQueryHandler, filters, ContextTypes
 )
 
 # Initialize Flask app
@@ -71,33 +71,13 @@ class InviteTrackerBot:
         await update.message.reply_text(message, reply_markup=InlineKeyboardMarkup(buttons))
 
     async def track_new_member(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        logger.info(f"Track new member update: {update}")
-        if update.message:
-            try:
-                for new_member in update.message.new_chat_members:
-                    inviter = update.message.from_user
-                    if inviter.id == new_member.id:
-                        continue
-                    logger.info(f"New member in normal group by {inviter.id}: {new_member.id}")
-                    await self.update_invite_count(inviter, new_member, context)
-            except Exception as e:
-                logger.error(f"Error in normal group tracking: {e}")
-        elif update.chat_member:
-            # This is for supergroups where we don't have direct inviter information
-            new_member = update.chat_member.new_chat_member.user
-            # Here, we'll need to use a different approach since we can't determine the inviter directly
-            try:
-                # Credit all admins for new members in supergroups as a workaround
-                chat_id = update.chat_member.chat.id
-                admins = await context.bot.get_chat_administrators(chat_id)
-                for admin in admins:
-                    if admin.user.is_bot:
-                        continue
-                    await self.update_invite_count(admin.user, new_member, context)
-            except Exception as e:
-                logger.error(f"Error in supergroup tracking: {e}")
+        inviter = update.message.from_user
+        for new_member in update.message.new_chat_members:
+            if inviter.id == new_member.id:
+                continue  # Don't count if the user invited themselves
+            await self.update_invite_count(inviter, context)
 
-    async def update_invite_count(self, inviter, new_member, context: ContextTypes.DEFAULT_TYPE):
+    async def update_invite_count(self, inviter, context: ContextTypes.DEFAULT_TYPE):
         inviter_id = inviter.id
         if inviter_id not in self.invite_counts:
             self.invite_counts[inviter_id] = {
@@ -105,49 +85,26 @@ class InviteTrackerBot:
                 'first_name': inviter.first_name,
                 'withdrawal_key': None
             }
-        # Increment the invite count for the inviter
         self.invite_counts[inviter_id]['invite_count'] += 1
         invite_count = self.invite_counts[inviter_id]['invite_count']
 
-        if invite_count % 2 == 0:
-            first_name = self.invite_counts[inviter_id]['first_name']
-            balance = invite_count * 50
-            remaining = max(4 - invite_count, 0)
+        if invite_count % 2 == 0:  # Every 2 invites, send a message
+            message = f"Use /claim to claim your reward for inviting {invite_count} members!"
+            await context.bot.send_message(chat_id=inviter_id, text=message)
 
-            if invite_count >= 4:
-                message = (
-                    f"Congratulations 👏👏🎉\n\n"
-                    f"📊 Milestone Achieved: @DIGITAL_BIRRI\n"
-                    f"-----------------------\n"
-                    f"👤 User: {first_name}\n"
-                    f"👥 Invites: Nama {invite_count} afeertaniittu\n"
-                    f"💰 Balance: {balance} ETB\n"
-                    f"🚀 Baafachuuf: Baafachuu ni dandeessu! \n"
-                    f"-----------------------\n\n"
-                    f"Baafachuuf kan jedhu tuquun baafadhaa 👇"
-                )
-                buttons = [
-                    [InlineKeyboardButton("Baafachuuf", url="https://t.me/Digital_Birr_Bot?start=ar6222905852")]
-                ]
+    async def claim_invite(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        user = update.message.from_user
+        if user.id in self.invite_counts:
+            invite_count = self.invite_counts[user.id]['invite_count']
+            if invite_count > 0:  # Only allow claiming if there are invites to claim
+                # Here we don't increment invite_count, we just inform the user
+                balance = invite_count * 50
+                message = f"You have claimed your reward for {invite_count} invites. Your balance is now {balance} ETB."
+                await update.message.reply_text(message)
             else:
-                message = (
-                    f"📊 Invite Progress: @DIGITAL_BIRRI\n"
-                    f"-----------------------\n"
-                    f"👤 User: {first_name}\n"
-                    f"👥 Invites: Nama {invite_count} afeertaniittu \n"
-                    f"💰 Balance: {balance} ETB\n"
-                    f"🚀 Baafachuuf: Dabalataan nama {remaining} afeeraa\n"
-                    f"-----------------------\n\n"
-                    f"Add gochuun carraa badhaasaa keessan dabalaa!"
-                )
-                buttons = [
-                    [InlineKeyboardButton("Check", callback_data=f"check_{inviter_id}")]
-                ]
-            try:
-                await context.bot.send_message(chat_id=inviter_id, text=message, reply_markup=InlineKeyboardMarkup(buttons))
-                logger.info(f"Message sent to {inviter_id}")
-            except Exception as e:
-                logger.error(f"Failed to send message: {e}")
+                await update.message.reply_text("You have no invites to claim.")
+        else:
+            await update.message.reply_text("You have no invitation data. Please start by inviting members.")
 
     async def handle_check(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         query = update.callback_query
@@ -202,14 +159,15 @@ class InviteTrackerBot:
 
             application.add_handler(CommandHandler("start", self.start))
             application.add_handler(MessageHandler(filters.StatusUpdate.NEW_CHAT_MEMBERS, self.track_new_member))
-            # Use CHAT_MEMBER to catch all membership changes, not just the bot's
-            application.add_handler(ChatMemberHandler(self.track_new_member, ChatMemberHandler.CHAT_MEMBER))
+            application.add_handler(CommandHandler("claim", self.claim_invite))
             application.add_handler(CallbackQueryHandler(self.handle_check, pattern=r'^check_\d+$'))
             application.add_handler(CallbackQueryHandler(self.handle_key, pattern=r'^key_\d+$'))
 
             logger.info("Bot started successfully!")
 
+            # Run the bot asynchronously, using asyncio.run() in a blocking way
             asyncio.run(application.run_polling(drop_pending_updates=True))
+
         except Exception as e:
             logger.error(f"Failed to start bot: {e}")
 
