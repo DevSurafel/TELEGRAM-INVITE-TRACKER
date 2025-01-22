@@ -215,11 +215,17 @@ def index():
     return "Bot is running!"
 
 def main():
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
+    TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
+    SUPERGROUP_ID = int(os.getenv('SUPERGROUP_ID'))
     
-    loop.create_task(run_bot())
-    app.run(host='0.0.0.0', port=int(os.getenv('PORT', 5000)))
+    if not TOKEN or not SUPERGROUP_ID:
+        logger.error("Missing required environment variables")
+        return
+    
+    bot = InviteTrackerBot(TOKEN, SUPERGROUP_ID)
+    
+    # Run bot in the background
+    asyncio.run(bot.initialize())
 
 if __name__ == "__main__":
     main()
