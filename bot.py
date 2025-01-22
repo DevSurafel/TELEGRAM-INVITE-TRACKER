@@ -73,31 +73,36 @@ class InviteTrackerBot:
     async def track_new_member(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         logger.info(f"Track new member update: {update}")
         if update.message:
-            for new_member in update.message.new_chat_members:
-                try:
+            try:
+                for new_member in update.message.new_chat_members:
                     inviter = update.message.from_user
                     if inviter.id == new_member.id:
                         continue
                     logger.info(f"New member in normal group by {inviter.id}: {new_member.id}")
                     await self.update_invite_count(inviter, new_member, context)
-                except Exception as e:
-                    logger.error(f"Error tracking invite in normal group: {e}")
-        elif update.my_chat_member:
-            new_member = update.my_chat_member.new_chat_member.user
-            try:
-                # In supergroups, we don't know the inviter directly; this is a placeholder
-                logger.info(f"New member in supergroup: {new_member.id}")
-                # Assuming bot is inviter is not ideal; might need another tracking method
-                await self.update_invite_count(context.bot, new_member, context)
             except Exception as e:
-                logger.error(f"Error tracking invite in supergroup: {e}")
+                logger.error(f"Error in normal group tracking: {e}")
+        elif update.chat_member:
+            # This is for supergroups where we don't have direct inviter information
+            new_member = update.chat_member.new_chat_member.user
+            # Here, we'll need to use a different approach since we can't determine the inviter directly
+            try:
+                # Credit all admins for new members in supergroups as a workaround
+                chat_id = update.chat_member.chat.id
+                admins = await context.bot.get_chat_administrators(chat_id)
+                for admin in admins:
+                    if admin.user.is_bot:
+                        continue
+                    await self.update_invite_count(admin.user, new_member, context)
+            except Exception as e:
+                logger.error(f"Error in supergroup tracking: {e}")
 
     async def update_invite_count(self, inviter, new_member, context: ContextTypes.DEFAULT_TYPE):
-        inviter_id = inviter.id if hasattr(inviter, 'id') else context.bot.id
+        inviter_id = inviter.id
         if inviter_id not in self.invite_counts:
             self.invite_counts[inviter_id] = {
                 'invite_count': 0,
-                'first_name': inviter.first_name if hasattr(inviter, 'first_name') else "Bot",
+                'first_name': inviter.first_name,
                 'withdrawal_key': None
             }
         # Increment the invite count for the inviter
@@ -197,15 +202,14 @@ class InviteTrackerBot:
 
             application.add_handler(CommandHandler("start", self.start))
             application.add_handler(MessageHandler(filters.StatusUpdate.NEW_CHAT_MEMBERS, self.track_new_member))
-            application.add_handler(ChatMemberHandler(self.track_new_member, ChatMemberHandler.MY_CHAT_MEMBER))
+            # Use CHAT_MEMBER to catch all membership changes, not just the bot's
+            application.add_handler(ChatMemberHandler(self.track_new_member, ChatMemberHandler.CHAT_MEMBER))
             application.add_handler(CallbackQueryHandler(self.handle_check, pattern=r'^check_\d+$'))
             application.add_handler(CallbackQueryHandler(self.handle_key, pattern=r'^key_\d+$'))
 
             logger.info("Bot started successfully!")
 
-            # Run the bot asynchronously, using asyncio.run() in a blocking way
             asyncio.run(application.run_polling(drop_pending_updates=True))
-
         except Exception as e:
             logger.error(f"Failed to start bot: {e}")
 
