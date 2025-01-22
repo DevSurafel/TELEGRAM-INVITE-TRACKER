@@ -88,6 +88,9 @@ class InviteTrackerBot:
 
             logger.info(f"User {inviter.id} invited {new_member.id}. Total invites: {invite_count}")
 
+            # Update the invite count in the database
+            await self.update_invite_count(inviter.id, invite_count)
+
             # Send a message to the group chat with the updated invite count
             buttons = [
                 [InlineKeyboardButton("Check", callback_data=f"check_{inviter.id}")]
@@ -108,11 +111,16 @@ class InviteTrackerBot:
                 f"Invite more friends!"
             )
 
-            await context.bot.send_message(
+                        await context.bot.send_message(
                 chat_id=update.effective_chat.id,
                 text=message,
                 reply_markup=InlineKeyboardMarkup(buttons)
             )
+
+    async def update_invite_count(self, user_id: int, invite_count: int) -> None:
+        # Update the invite count in the database
+        # For this example, we're just logging the update
+        logger.info(f"Updating invite count for user {user_id} to {invite_count}")
 
     async def handle_check(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         query = update.callback_query
