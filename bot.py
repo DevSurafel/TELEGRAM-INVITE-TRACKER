@@ -42,9 +42,9 @@ class InviteTrackerBot:
 
         first_name = self.invite_counts[user.id]['first_name']
         balance = invite_count * 50
-        remaining = max(200 - invite_count, 0)
+        remaining = max(4 - invite_count, 0)
 
-        if invite_count >= 200:
+        if invite_count >= 4:
             message = (
                 f"Congratulations 👏👏🎉\n\n"
                 f"📊 Milestone Achieved: @DIGITAL_BIRRI\n"
@@ -112,12 +112,12 @@ class InviteTrackerBot:
 
             logger.info(f"User {inviter.id} invited member {new_member.id}. Total invites: {invite_count}")
 
-            if invite_count % 10 == 0:
+            if invite_count % 2 == 0:
                 first_name = self.invite_counts[inviter.id]['first_name']
                 balance = invite_count * 50
-                remaining = max(200 - invite_count, 0)
+                remaining = max(4 - invite_count, 0)
 
-                if invite_count >= 200:
+                if invite_count >= 4:
                     message = (
                         f"Congratulations 👏👏🎉\n\n"
                         f"📊 Milestone Achieved: @DIGITAL_BIRRI\n"
@@ -161,7 +161,7 @@ class InviteTrackerBot:
         invite_count = user_data['invite_count']
         first_name = user_data['first_name']
         balance = invite_count * 50
-        remaining = max(200 - invite_count, 0)
+        remaining = max(4 - invite_count, 0)
 
         message = (
             f"📊 Invite Progress: @DIGITAL_BIRRI\n"
@@ -188,13 +188,13 @@ class InviteTrackerBot:
         invite_count = user_data['invite_count']
         first_name = user_data['first_name']
 
-        if invite_count >= 200:
+        if invite_count >= 4:
             if not user_data['withdrawal_key']:
                 user_data['withdrawal_key'] = random.randint(100000, 999999)
             withdrawal_key = user_data['withdrawal_key']
             await query.answer(f"Kabajamoo {first_name}, Lakkoofsi Key🔑 keessanii: 👉{withdrawal_key}", show_alert=True)
         else:
-            await query.answer(f"Kabajamoo {first_name}, lakkoofsa Key argachuuf yoo xiqqaate nama 200 afeeruu qabdu!", show_alert=True)
+            await query.answer(f"Kabajamoo {first_name}, lakkoofsa Key argachuuf yoo xiqqaate nama 4 afeeruu qabdu!", show_alert=True)
 
     def run(self):
         try:
