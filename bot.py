@@ -10,7 +10,7 @@ from telegram.ext import (
     CallbackQueryHandler, filters, ContextTypes
 )
 
-# Initialize Flask app
+# Initialize Flask  app
 app = Flask(__name__)
 
 logging.basicConfig(
