@@ -1,5 +1,6 @@
 import os
 import logging
+import random
 from typing import Dict
 import asyncio
 from flask import Flask
@@ -21,8 +22,7 @@ logger = logging.getLogger(__name__)
 class InviteTrackerBot:
     def __init__(self, token: str):
         self.token = token
-        self.invite_counts: Dict[int, Dict] = {}
-        self.user_invite_links: Dict[int, str] = {}  # User ID -> invite link
+        self.invite_counts: Dict[int, Dict[str, int]] = {}
 
     async def start(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         user = update.message.from_user
@@ -32,24 +32,16 @@ class InviteTrackerBot:
                 'first_name': user.first_name,
                 'withdrawal_key': None
             }
-        
-        # Generate or get the existing invite link for this user
-        if user.id not in self.user_invite_links:
-            invite_link = await context.bot.create_chat_invite_link(
-                chat_id=update.message.chat_id, 
-                member_limit=1  # Only one use per link
-            )
-            self.user_invite_links[user.id] = invite_link.invite_link
-
         invite_count = self.invite_counts[user.id]['invite_count']
-        first_name = self.invite_counts[user.id]['first_name']
-        balance = invite_count * 50
-        remaining = max(4 - invite_count, 0)
 
         buttons = [
             [InlineKeyboardButton("Check", callback_data=f"check_{user.id}"),
              InlineKeyboardButton("Key🔑", callback_data=f"key_{user.id}")]
         ]
+
+        first_name = self.invite_counts[user.id]['first_name']
+        balance = invite_count * 50
+        remaining = max(4 - invite_count, 0)
 
         if invite_count >= 4:
             message = (
@@ -73,30 +65,73 @@ class InviteTrackerBot:
                 f"💰 Balance: {balance} ETB\n"
                 f"🚀 Baafachuuf: Dabalataan nama {remaining} afeeraa\n"
                 f"-----------------------\n\n"
-                f"Add gochuun carraa badhaasaa keessan dabalaa!\n\n"
-                f"Use this link to invite members: {self.user_invite_links[user.id]}"
+                f"Add gochuun carraa badhaasaa keessan dabalaa!"
             )
 
         await update.message.reply_text(message, reply_markup=InlineKeyboardMarkup(buttons))
 
     async def track_new_member(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        # This method will be called when a new member joins, but we'll need to check invite links
-        for new_member in update.message.new_chat_members:
-            # Check if the new member joined via one of our tracked links
-            chat_invite_link = await context.bot.get_chat_invite_link(update.message.chat_id, link=self.user_invite_links.get(new_member.id))
-            if chat_invite_link:
-                # Find who created this link
-                for user_id, link in self.user_invite_links.items():
-                    if link == chat_invite_link.invite_link:
-                        self.invite_counts[user_id]['invite_count'] += 1
-                        # Reset the link since it's a one-time use
-                        del self.user_invite_links[user_id]
-                        break
+        if update.effective_chat.type != 'supergroup':
+            for new_member in update.message.new_chat_members:
+                try:
+                    inviter = update.message.from_user
+                    if inviter.id == new_member.id:
+                        continue
+                    if inviter.id not in self.invite_counts:
+                        self.invite_counts[inviter.id] = {
+                            'invite_count': 0,
+                            'first_name': inviter.first_name,
+                            'withdrawal_key': None
+                        }
+                    # Increment the invite count for the inviter
+                    self.invite_counts[inviter.id]['invite_count'] += 1
+                    self._update_user_status(inviter.id, update)
+                except Exception as e:
+                    logger.error(f"Error tracking invite: {e}")
+        else:
+            logger.warning("This event is not supported in supergroups directly. Use admin logs for tracking.")
 
-            # Here you would update your messages or do other tracking, but for simplicity:
-            await update.message.reply_text("New member joined!")
+    async def _update_user_status(self, user_id: int, update: Update):
+        # This method checks if an invite should be counted (e.g., every 2 invites)
+        invite_count = self.invite_counts[user_id]['invite_count']
+        if invite_count % 2 == 0:  # Only update every 2 invites for simplicity
+            first_name = self.invite_counts[user_id]['first_name']
+            balance = invite_count * 50
+            remaining = max(4 - invite_count, 0)
 
-    # Rest of your methods (handle_check, handle_key) remain unchanged
+            if invite_count >= 4:
+                message = (
+                    f"Congratulations 👏👏🎉\n\n"
+                    f"📊 Milestone Achieved: @DIGITAL_BIRRI\n"
+                    f"-----------------------\n"
+                    f"👤 User: {first_name}\n"
+                    f"👥 Invites: Nama {invite_count} afeertaniittu\n"
+                    f"💰 Balance: {balance} ETB\n"
+                    f"🚀 Baafachuuf: Baafachuu ni dandeessu! \n"
+                    f"-----------------------\n\n"
+                    f"Baafachuuf kan jedhu tuquun baafadhaa 👇"
+                )
+                buttons = [
+                    [InlineKeyboardButton("Baafachuuf", url="https://t.me/Digital_Birr_Bot?start=ar6222905852")]
+                ]
+            else:
+                message = (
+                    f"📊 Invite Progress: @DIGITAL_BIRRI\n"
+                    f"-----------------------\n"
+                    f"👤 User: {first_name}\n"
+                    f"👥 Invites: Nama {invite_count} afeertaniittu \n"
+                    f"💰 Balance: {balance} ETB\n"
+                    f"🚀 Baafachuuf: Dabalataan nama {remaining} afeeraa\n"
+                    f"-----------------------\n\n"
+                    f"Add gochuun carraa badhaasaa keessan dabalaa!"
+                )
+                buttons = [
+                    [InlineKeyboardButton("Check", callback_data=f"check_{user_id}")]
+                ]
+
+            await update.message.reply_text(message, reply_markup=InlineKeyboardMarkup(buttons))
+
+    # ... Keep other methods like handle_check, handle_key unchanged ...
 
     def run(self):
         try:
