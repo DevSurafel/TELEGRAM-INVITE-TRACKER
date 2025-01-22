@@ -3,15 +3,11 @@ import logging
 import random
 from typing import Dict
 import asyncio
-from flask import Flask
 from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton
 from telegram.ext import (
     Application, CommandHandler, MessageHandler,
     CallbackQueryHandler, filters, ContextTypes
 )
-
-# Initialize Flask app
-app = Flask(__name__)
 
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -151,23 +147,23 @@ class InviteTrackerBot:
 
     async def run(self):
         try:
-            self.application = Application.builder().token(self.token).build()
+            async with Application.builder().token(self.token).build() as application:
+                self.application = application  # Store application instance
+                application.add_handler(CommandHandler("start", self.start))
+                application.add_handler(CommandHandler("generate_token", self.generate_invite_token))
+                application.add_handler(CommandHandler("join", self.join_group))
+                application.add_handler(CommandHandler("claim", self.claim_invite))
+                application.add_handler(CallbackQueryHandler(self.handle_check, pattern=r'^check_\d+$'))
+                application.add_handler(CallbackQueryHandler(self.handle_key, pattern=r'^key_\d+$'))
+                application.add_handler(CallbackQueryHandler(self.generate_invite_token, pattern=r'^generate_token_\d+$'))
 
-            self.application.add_handler(CommandHandler("start", self.start))
-            self.application.add_handler(CommandHandler("generate_token", self.generate_invite_token))
-            self.application.add_handler(CommandHandler("join", self.join_group))
-            self.application.add_handler(CommandHandler("claim", self.claim_invite))
-            self.application.add_handler(CallbackQueryHandler(self.handle_check, pattern=r'^check_\d+$'))
-            self.application.add_handler(CallbackQueryHandler(self.handle_key, pattern=r'^key_\d+$'))
-            self.application.add_handler(CallbackQueryHandler(self.generate_invite_token, pattern=r'^generate_token_\d+$'))
+                logger.info("Bot started successfully!")
 
-            logger.info("Bot started successfully!")
+                # Send a message to confirm bot is operational in the group
+                await self.send_startup_message()
 
-            # Send a message to confirm bot is operational in the group
-            await self.send_startup_message()
-
-            # Run the bot asynchronously
-            await self.application.run_polling(drop_pending_updates=True)
+                # Run the bot asynchronously
+                await application.run_polling(drop_pending_updates=True)
         except Exception as e:
             logger.error(f"Failed to start bot: {e}")
 
@@ -179,11 +175,6 @@ class InviteTrackerBot:
         except Exception as e:
             logger.error(f"Failed to send startup message: {e}")
 
-# Web server to keep the service running on Render
-@app.route('/')
-def index():
-    return "Bot is running!"
-
 def main():
     TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
     if not TOKEN:
@@ -194,12 +185,4 @@ def main():
     asyncio.run(bot.run())
 
 if __name__ == "__main__":
-    import threading
-
-    def run_flask():
-        app.run(host='0.0.0.0', port=int(os.getenv('PORT', 5000)))
-
-    flask_thread = threading.Thread(target=run_flask)
-    flask_thread.start()
-
     main()
