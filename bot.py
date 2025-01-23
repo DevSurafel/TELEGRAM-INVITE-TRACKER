@@ -71,67 +71,77 @@ class InviteTrackerBot:
         await update.message.reply_text(message, reply_markup=InlineKeyboardMarkup(buttons))
 
     async def track_new_member(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        if update.effective_chat.type != 'supergroup':
-            for new_member in update.message.new_chat_members:
-                try:
-                    inviter = update.message.from_user
-                    if inviter.id == new_member.id:
-                        continue
-                    if inviter.id not in self.invite_counts:
-                        self.invite_counts[inviter.id] = {
-                            'invite_count': 0,
-                            'first_name': inviter.first_name,
-                            'withdrawal_key': None
-                        }
-                    # Increment the invite count for the inviter
-                    self.invite_counts[inviter.id]['invite_count'] += 1
-                    self._update_user_status(inviter.id, update)
-                except Exception as e:
-                    logger.error(f"Error tracking invite: {e}")
-        else:
-            logger.warning("This event is not supported in supergroups directly. Use admin logs for tracking.")
-
-    async def _update_user_status(self, user_id: int, update: Update):
-        # This method checks if an invite should be counted (e.g., every 2 invites)
-        invite_count = self.invite_counts[user_id]['invite_count']
-        if invite_count % 2 == 0:  # Only update every 2 invites for simplicity
-            first_name = self.invite_counts[user_id]['first_name']
-            balance = invite_count * 50
-            remaining = max(4 - invite_count, 0)
-
-            if invite_count >= 4:
-                message = (
-                    f"Congratulations 👏👏🎉\n\n"
-                    f"📊 Milestone Achieved: @DIGITAL_BIRRI\n"
-                    f"-----------------------\n"
-                    f"👤 User: {first_name}\n"
-                    f"👥 Invites: Nama {invite_count} afeertaniittu\n"
-                    f"💰 Balance: {balance} ETB\n"
-                    f"🚀 Baafachuuf: Baafachuu ni dandeessu! \n"
-                    f"-----------------------\n\n"
-                    f"Baafachuuf kan jedhu tuquun baafadhaa 👇"
+        for new_member in update.message.new_chat_members:
+            try:
+                # Instead of assuming the message sender is the inviter, we check logs
+                chat_id = update.message.chat_id
+                events = await context.bot.get_chat_event_log(
+                    chat_id=chat_id,
+                    query="",
+                    from_date=update.message.date - 60,  # Look back one minute for the invite event
+                    to_date=update.message.date,
+                    filters={'member_invited': True}  # Only member_invited events
                 )
-                buttons = [
-                    [InlineKeyboardButton("Baafachuuf", url="https://t.me/Digital_Birr_Bot?start=ar6222905852")]
-                ]
-            else:
-                message = (
-                    f"📊 Invite Progress: @DIGITAL_BIRRI\n"
-                    f"-----------------------\n"
-                    f"👤 User: {first_name}\n"
-                    f"👥 Invites: Nama {invite_count} afeertaniittu \n"
-                    f"💰 Balance: {balance} ETB\n"
-                    f"🚀 Baafachuuf: Dabalataan nama {remaining} afeeraa\n"
-                    f"-----------------------\n\n"
-                    f"Add gochuun carraa badhaasaa keessan dabalaa!"
-                )
-                buttons = [
-                    [InlineKeyboardButton("Check", callback_data=f"check_{user_id}")]
-                ]
+                
+                for event in events:
+                    if event.action == 'chat_member':
+                        inviter_id = event.from_user.id
+                        if inviter_id != new_member.id:  # Avoid counting self-joins
+                            if inviter_id not in self.invite_counts:
+                                self.invite_counts[inviter_id] = {
+                                    'invite_count': 0,
+                                    'first_name': event.from_user.first_name,
+                                    'withdrawal_key': None
+                                }
+                            self.invite_counts[inviter_id]['invite_count'] += 1
+                            invite_count = self.invite_counts[inviter_id]['invite_count']
 
-            await update.message.reply_text(message, reply_markup=InlineKeyboardMarkup(buttons))
+                            if invite_count % 2 == 0:
+                                first_name = self.invite_counts[inviter_id]['first_name']
+                                balance = invite_count * 50
+                                remaining = max(4 - invite_count, 0)
 
-    # ... Keep other methods like handle_check, handle_key unchanged ...
+                                if invite_count >= 4:
+                                    message = (
+                                        f"Congratulations 👏👏🎉\n\n"
+                                        f"📊 Milestone Achieved: @DIGITAL_BIRRI\n"
+                                        f"-----------------------\n"
+                                        f"👤 User: {first_name}\n"
+                                        f"👥 Invites: Nama {invite_count} afeertaniittu\n"
+                                        f"💰 Balance: {balance} ETB\n"
+                                        f"🚀 Baafachuuf: Baafachuu ni dandeessu! \n"
+                                        f"-----------------------\n\n"
+                                        f"Baafachuuf kan jedhu tuquun baafadhaa 👇"
+                                    )
+                                    buttons = [
+                                        [InlineKeyboardButton("Baafachuuf", url="https://t.me/Digital_Birr_Bot?start=ar6222905852")]
+                                    ]
+                                else:
+                                    message = (
+                                        f"📊 Invite Progress: @DIGITAL_BIRRI\n"
+                                        f"-----------------------\n"
+                                        f"👤 User: {first_name}\n"
+                                        f"👥 Invites: Nama {invite_count} afeertaniittu \n"
+                                        f"💰 Balance: {balance} ETB\n"
+                                        f"🚀 Baafachuuf: Dabalataan nama {remaining} afeeraa\n"
+                                        f"-----------------------\n\n"
+                                        f"Add gochuun carraa badhaasaa keessan dabalaa!"
+                                    )
+                                    buttons = [
+                                        [InlineKeyboardButton("Check", callback_data=f"check_{inviter_id}")]
+                                    ]
+
+                                await context.bot.send_message(chat_id=chat_id, text=message, reply_markup=InlineKeyboardMarkup(buttons))
+                            break  # We've identified the inviter, no need to continue
+
+            except Exception as e:
+                logger.error(f"Error tracking invite: {e}")
+
+    async def handle_check(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        # ... [No changes here, method remains the same]
+
+    async def handle_key(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        # ... [No changes here, method remains the same]
 
     def run(self):
         try:
