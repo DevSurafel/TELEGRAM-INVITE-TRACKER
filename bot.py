@@ -2,7 +2,7 @@ import os
 import logging
 from pyrogram import Client, enums
 from pyrogram.types import Message
-from pyrogram.enums import ChatEventAction
+from pyrogram.enums import ChatAction, ChatEventAction
 from telegram import InlineKeyboardMarkup, InlineKeyboardButton
 from typing import Dict
 
@@ -23,6 +23,7 @@ app = Client("my_bot", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TOKEN)
 
 invite_counts: Dict[int, Dict[str, int]] = {}
 
+# Updated event handler to use the correct ChatAction enum
 @app.on_message(enums.ChatAction.NEW_CHAT_MEMBERS)
 async def new_member_handler(client: Client, message: Message):
     """
@@ -34,14 +35,13 @@ async def new_member_handler(client: Client, message: Message):
         events = await client.get_chat_event_log(
             chat_id=chat_id,
             query="",
-            # Here, we use enums.ChatEventFilter instead of ChatEventLogFilters
             filters=enums.ChatEventFilter.GROUP_INFO,
             max_date=message.date
         )
         
         for event in events:
             if event.action == ChatEventAction.MEMBER_INVITED:
-                inviter_id = event.from_user.id  # Changed from event.user.id to event.from_user.id
+                inviter_id = event.from_user.id
                 if inviter_id not in invite_counts:
                     invite_counts[inviter_id] = {
                         'invite_count': 0,
