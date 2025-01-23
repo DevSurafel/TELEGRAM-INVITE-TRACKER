@@ -1,8 +1,8 @@
 import os
 import logging
-from pyrogram import Client, enums
+from pyrogram import Client, filters
 from pyrogram.types import Message
-from pyrogram.enums import ChatAction, ChatEventAction
+from pyrogram.enums import ChatEventAction
 from telegram import InlineKeyboardMarkup, InlineKeyboardButton
 from typing import Dict
 
@@ -23,8 +23,8 @@ app = Client("my_bot", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TOKEN)
 
 invite_counts: Dict[int, Dict[str, int]] = {}
 
-# Updated event handler to use the correct ChatAction enum
-@app.on_message(enums.ChatAction.NEW_CHAT_MEMBERS)
+# Use filters.StatusUpdate.NEW_CHAT_MEMBERS instead of ChatAction
+@app.on_message(filters.StatusUpdate.NEW_CHAT_MEMBERS)
 async def new_member_handler(client: Client, message: Message):
     """
     Handler for when a new member joins the group. 
