@@ -23,8 +23,8 @@ app = Client("my_bot", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TOKEN)
 
 invite_counts: Dict[int, Dict[str, int]] = {}
 
-# Use filters.StatusUpdate.NEW_CHAT_MEMBERS instead of ChatAction
-@app.on_message(filters.StatusUpdate.NEW_CHAT_MEMBERS)
+# Use a custom filter for new members
+@app.on_message(filters.group & filters.service & lambda _, __, m: m.service == 'chat_add_user')
 async def new_member_handler(client: Client, message: Message):
     """
     Handler for when a new member joins the group. 
