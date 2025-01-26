@@ -128,18 +128,18 @@ class InviteTrackerBot:
         
         user_id = int(query.data.split('_')[2])  # Extract user ID from callback data
         if user_id not in self.invite_counts or 'inviter_id' in self.invite_counts[user_id]:
-            await query.edit_message_text("Kabajamoo, Code nama isin afeeree duraan galchitanii jirtu. Yeroo lammataa galchuu hin dandeessan. Sababnisaa namni garaagaraa 2 isin afeeruu hin danda'u. 👉/start ")
+            await query.edit_message_text("Kabajamoo, Code nama isin afeeree duraan galchitanii jirtu. Yeroo lammataa galchuu hin dandeessan. 👉/start ")
             return
 
         # Instead of inline query, we send a message with the command syntax
-        await query.edit_message_text("Code nama isin afeeree galchuuf chat irratti akkasiin galchaa :\n/send_invite_code <code nama isin afeeree>")
+        await query.edit_message_text("Code nama isin afeeree galchaa :\n\n   /send_invite_code <Code> \n\n  👉/start")
 
     async def handle_send_invite_code(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         user = update.effective_user
         message = update.message.text.split()
         
         if len(message) != 2:
-            await update.message.reply_text("Code nama isin afeeree galchuuf chat irratti akkasiin galchaa: /send_invite_code <code nama isin afeeree>")
+            await update.message.reply_text("Code nama isin afeeree galchaa galchaa: \n\n /send_invite_code <Code> \n\n  👉/start")
             return
 
         inviter_id = message[1].upper()  # Convert to uppercase to match the IDs format
@@ -149,17 +149,17 @@ class InviteTrackerBot:
             return
         
         if 'inviter_id' in self.invite_counts[user.id]:
-            await update.message.reply_text("Milkaa'inaan galchitanii jirtu. Nama isin afeereef 50 ETB dabalameera! 👉/start")
+            await update.message.reply_text("Milkaa'inaan galchitanii jirtu. Nama isin afeereef 50 ETB dabalameera! \n\n 👉/start")
             return
 
         for inviter_user_id, unique_id in self.user_unique_ids.items():
             if unique_id == inviter_id:
                 self.invite_counts[inviter_user_id]['invite_count'] += 1
                 self.invite_counts[user.id]['inviter_id'] = inviter_user_id
-                await update.message.reply_text(f"Milkaa'inaan galchitanii jirtu. Nama isin afeereef 50 ETB dabalameera! 👉/start")
+                await update.message.reply_text(f"Milkaa'inaan galchitanii jirtu. Nama isin afeereef 50 ETB dabalameera! \n\n  👉/start")
                 return
         
-        await update.message.reply_text("Code isin galchitan dogooggora. Irra deebi'uun galchaa. 👉/start")
+        await update.message.reply_text("Code isin galchitan dogooggora. Irra deebi'uun galchaa. \n\n 👉/start")
 
     async def handle_check(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         query = update.callback_query
