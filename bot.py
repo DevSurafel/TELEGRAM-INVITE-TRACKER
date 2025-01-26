@@ -139,7 +139,7 @@ class InviteTrackerBot:
         message = update.message.text.split()
         
         if len(message) != 2:
-            await update.message.reply_text("Code nama isin afeeree galchaa galchaa: \n\n /send_invite_code <Code> \n\n  👉/start")
+            await update.message.reply_text("Code nama isin afeeree galchaa: \n\n /send_invite_code <Code> \n\n  👉/start")
             return
 
         inviter_id = message[1].upper()  # Convert to uppercase to match the IDs format
