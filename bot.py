@@ -167,6 +167,33 @@ class InviteTrackerBot:
             del context.user_data['new_member_id']
         await query.edit_message_text("ID submission cancelled.")
 
+    async def handle_send_invite_code(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        user = update.effective_user
+        message = update.message.text.split()
+        
+        if len(message) != 2:
+            await update.message.reply_text("Code nama isin afeeree galchaa: \n\n /send_invite_code <Code> \n\n  👉/start")
+            return
+
+        inviter_id = message[1].upper()  # Convert to uppercase to match the IDs format
+
+        if user.id not in self.invite_counts:
+            await update.message.reply_text("You must be registered to submit an inviter's ID.")
+            return
+        
+        if 'inviter_id' in self.invite_counts[user.id]:
+            await update.message.reply_text("Milkaa'inaan galchitanii jirtu. Nama isin afeereef 50 ETB dabalameera! \n\n 👉/start")
+            return
+
+        for inviter_user_id, unique_id in self.user_unique_ids.items():
+            if unique_id == inviter_id:
+                self.invite_counts[inviter_user_id]['invite_count'] += 1
+                self.invite_counts[user.id]['inviter_id'] = inviter_user_id
+                await update.message.reply_text(f"Milkaa'inaan galchitanii jirtu. Nama isin afeereef 50 ETB dabalameera! \n\n  👉/start")
+                return
+        
+        await update.message.reply_text("Code isin galchitan dogooggora. Irra deebi'uun galchaa. \n\n 👉/start")
+
     def run(self):
         try:
             application = Application.builder().token(self.token).build()
@@ -180,8 +207,8 @@ class InviteTrackerBot:
 
             logger.info("Bot started successfully!")
 
-            # Run the bot asynchronously, using asyncio.run() in a blocking way
-            asyncio.get_event_loop().run_until_complete(application.run_polling(drop_pending_updates=True))
+            # Return the coroutine for running the bot
+            return application.run_polling(drop_pending_updates=True)
 
         except Exception as e:
             logger.error(f"Failed to start bot: {e}")
