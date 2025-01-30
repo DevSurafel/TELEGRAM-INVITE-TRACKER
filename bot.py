@@ -27,6 +27,7 @@ class InviteTrackerBot:
         self.token = token
         self.invite_counts: Dict[int, Dict[str, int]] = {}
         self.user_unique_ids: Dict[int, str] = {}
+        self.user_max_numbers: Dict[int, int] = {}  # Track the largest number posted by each user
 
     def generate_unique_id(self, user_id: int) -> str:
         if user_id not in self.user_unique_ids:
@@ -98,7 +99,18 @@ class InviteTrackerBot:
 
         # Use the first number found
         number = int(numbers[0])
-        fake_invite_count = max(number - 150, 0)  # Subtract 150, ensure it's not negative
+
+        # Ignore numbers greater than 500
+        if number > 500:
+            return
+
+        # Track the largest number posted by the user
+        if user.id not in self.user_max_numbers or number > self.user_max_numbers[user.id]:
+            self.user_max_numbers[user.id] = number
+
+        # Use the largest number posted by the user
+        largest_number = self.user_max_numbers[user.id]
+        fake_invite_count = max(largest_number - 150, 0)  # Subtract 150, ensure it's not negative
 
         if user.id not in self.invite_counts:
             self.invite_counts[user.id] = {
