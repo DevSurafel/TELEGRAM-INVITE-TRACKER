@@ -37,8 +37,7 @@ class InviteTrackerBot:
         invite_count = user['invite_count']
         buttons = [
             [InlineKeyboardButton("Check", callback_data=f"check_{user['user_id']}"),
-             InlineKeyboardButton("Key🔑", callback_data=f"key_{user['user_id']}")],
-            [InlineKeyboardButton("Enter Inviter Code", callback_data=f"enter_inviter_{user['user_id']}")]  # New button for ID submission
+             InlineKeyboardButton("Key🔑", callback_data=f"key_{user['user_id']}")]
         ]
 
         first_name = user['first_name']
@@ -121,18 +120,6 @@ class InviteTrackerBot:
             }
             unique_id = self.generate_unique_id(user_id)
             await self.send_invite_info(update, self.invite_counts[user_id], unique_id)
-
-    async def handle_enter_inviter_id(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        query = update.callback_query
-        await query.answer()
-        
-        user_id = int(query.data.split('_')[2])  # Extract user ID from callback data
-        if user_id not in self.invite_counts or 'inviter_id' in self.invite_counts[user_id]:
-            await query.edit_message_text("Kabajamoo, Code nama isin afeeree duraan galchitanii jirtu. Yeroo lammataa galchuu hin dandeessan. 👉/start ")
-            return
-
-        # Instead of inline query, we send a message with the command syntax
-        await query.edit_message_text("Code nama isin afeeree galchaa :\n\n   /send_invite_code <Code> \n\n  👉/start")
 
     async def handle_send_invite_code(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         user = update.effective_user
@@ -224,7 +211,6 @@ class InviteTrackerBot:
             application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, self.first_message))  
             application.add_handler(CallbackQueryHandler(self.handle_check, pattern=r'^check_\d+$'))
             application.add_handler(CallbackQueryHandler(self.handle_key, pattern=r'^key_\d+$'))
-            application.add_handler(CallbackQueryHandler(self.handle_enter_inviter_id, pattern=r'^enter_inviter_\d+$'))  # Handler for ID entry instruction
             application.add_handler(CallbackQueryHandler(self.handle_cancel_id, pattern='^cancel_id$'))
             application.add_handler(CommandHandler("send_invite_code", self.handle_send_invite_code))  # New handler for the command
 
