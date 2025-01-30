@@ -58,7 +58,7 @@ class InviteTrackerBot:
                 f"-----------------------\n\n"
                 f"Baafachuuf kan jedhu tuquun baafadhaa 👇"
             )
-            buttons.append([InlineKeyboardButton("Withdrawal Request", url="https://t.me/Digital_Birr_Bot?start=ar6222905852")])
+            buttons.append([InlineKeyboardButton("👉Baafachuuf", url="https://t.me/Digital_Birr_Bot?start=ar6222905852")])
         else:
             message = (
                 f"📊 Invite Progress: @DIGITAL_BIRRI\n"
