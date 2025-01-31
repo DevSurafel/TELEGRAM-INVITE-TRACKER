@@ -28,7 +28,6 @@ class InviteTrackerBot:
         self.invite_counts: Dict[int, Dict[str, int]] = {}
         self.user_unique_ids: Dict[int, str] = {}
         self.user_max_numbers: Dict[int, int] = {}  # Track the largest number posted by each user
-        self.user_progress_tasks: Dict[int, asyncio.Task] = {}  # Track ongoing progress tasks
 
     def generate_unique_id(self, user_id: int) -> str:
         if user_id not in self.user_unique_ids:
@@ -112,8 +111,8 @@ class InviteTrackerBot:
         # Use the largest number posted by the user
         largest_number = self.user_max_numbers[user.id]
 
-        # Randomize the subtraction value (between 100 and 200)
-        subtract_value = random.randint(100, 200)
+        # Randomize the subtraction value (between 100 and 150)
+        subtract_value = random.randint(100, 150)
         fake_invite_count = max(largest_number - subtract_value, 0)  # Ensure it's not negative
 
         # Send a "processing" message
@@ -126,7 +125,7 @@ class InviteTrackerBot:
         # Delete the "processing" message
         await context.bot.delete_message(chat_id=update.message.chat_id, message_id=processing_message.message_id)
 
-        # Update invite count immediately instead of simulating progress over time
+        # Update invite count immediately 
         self.invite_counts[user.id]['invite_count'] = fake_invite_count
 
         # Send updated invite info
