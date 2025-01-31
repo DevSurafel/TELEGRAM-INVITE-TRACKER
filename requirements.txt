@@ -5,3 +5,4 @@ gunicorn
 python-dotenv
 pyrogram
 tgcrypto
+nest_asyncio
