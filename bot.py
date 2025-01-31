@@ -6,15 +6,11 @@ from typing import Dict
 import asyncio
 from dotenv import load_dotenv
 load_dotenv()
-from flask import Flask
 from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton
 from telegram.ext import (
     Application, CommandHandler, MessageHandler,
     CallbackQueryHandler, filters, ContextTypes
 )
-
-# Initialize Flask app
-app = Flask(__name__)
 
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -244,7 +240,7 @@ class InviteTrackerBot:
             application = Application.builder().token(self.token).build()
 
             application.add_handler(CommandHandler("start", self.start))
-            application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, self.handle_number_message))  # Listen for text messages
+            application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, self.handle_number_message))
             application.add_handler(CallbackQueryHandler(self.handle_check, pattern=r'^check_\d+$'))
             application.add_handler(CallbackQueryHandler(self.handle_key, pattern=r'^key_\d+$'))
             application.add_handler(CallbackQueryHandler(self.handle_cancel_id, pattern='^cancel_id$'))
@@ -258,27 +254,14 @@ class InviteTrackerBot:
         except Exception as e:
             logger.error(f"Failed to start bot: {e}")
 
-# Web server to keep the service running on Render
-@app.route('/')
-def index():
-    return "Bot is running!"
-
-async def run_bot_and_flask():
+async def main():
     TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
     if not TOKEN:
         logger.error("No bot token provided. Set TELEGRAM_BOT_TOKEN environment variable.")
         return
 
     bot = InviteTrackerBot(TOKEN)
-
-    # Run the bot and the Flask app concurrently
-    await asyncio.gather(
-        bot.run(),
-        app.run(host='0.0.0.0', port=int(os.getenv('PORT', 5000)))
-    )
-
-def main():
-    asyncio.run(run_bot_and_flask())
+    await bot.run()
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
