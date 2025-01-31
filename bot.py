@@ -263,7 +263,7 @@ class InviteTrackerBot:
 def index():
     return "Bot is running!"
 
-def main():
+async def run_bot_and_flask():
     TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
     if not TOKEN:
         logger.error("No bot token provided. Set TELEGRAM_BOT_TOKEN environment variable.")
@@ -271,12 +271,14 @@ def main():
 
     bot = InviteTrackerBot(TOKEN)
 
-    # Run the bot and the Flask app in the same event loop
-    loop = asyncio.get_event_loop()
-    loop.create_task(bot.run())  # Start the bot as a background task
+    # Run the bot and the Flask app concurrently
+    await asyncio.gather(
+        bot.run(),
+        app.run(host='0.0.0.0', port=int(os.getenv('PORT', 5000)))
+    )
 
-    # Start the Flask app (it will run in the main thread)
-    app.run(host='0.0.0.0', port=int(os.getenv('PORT', 5000)))
+def main():
+    asyncio.run(run_bot_and_flask())
 
 if __name__ == "__main__":
     main()
