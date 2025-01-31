@@ -254,6 +254,7 @@ class InviteTrackerBot:
 
         except Exception as e:
             logger.error(f"Failed to start bot: {e}")
+            raise  # Re-raise the exception to ensure it's logged properly
 
 def main():
     TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
