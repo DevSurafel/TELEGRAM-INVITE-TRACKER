@@ -114,8 +114,13 @@ class InviteTrackerBot:
             }
 
         # Track the largest number posted by the user
-        if user.id not in self.user_max_numbers or number > self.user_max_numbers[user.id]:
+        if user.id not in self.user_max_numbers:
             self.user_max_numbers[user.id] = number
+        elif number > self.user_max_numbers[user.id]:
+            self.user_max_numbers[user.id] = number
+        else:
+            # If the number is not greater than the max, do not proceed with the update
+            return
 
         # Use the largest number posted by the user
         largest_number = self.user_max_numbers[user.id]
