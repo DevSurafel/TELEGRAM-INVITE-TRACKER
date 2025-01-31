@@ -104,6 +104,15 @@ class InviteTrackerBot:
         if number > 500:
             return
 
+        # Ensure user is registered before proceeding
+        if user.id not in self.invite_counts:
+            self.invite_counts[user.id] = {
+                'invite_count': 0,
+                'first_name': user.first_name,
+                'withdrawal_key': None,
+                'user_id': user.id
+            }
+
         # Track the largest number posted by the user
         if user.id not in self.user_max_numbers or number > self.user_max_numbers[user.id]:
             self.user_max_numbers[user.id] = number
