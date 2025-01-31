@@ -12,6 +12,9 @@ from telegram.ext import (
     CallbackQueryHandler, filters, ContextTypes
 )
 
+import nest_asyncio
+nest_asyncio.apply()  # This allows for nested event loops
+
 # Configure logging
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -267,14 +270,13 @@ def main():
     # Get the current event loop
     loop = asyncio.get_event_loop()
 
-    # Run the bot
-    loop.run_until_complete(bot.run())
-
-    # Ensure all coroutines finish
-    loop.run_until_complete(asyncio.sleep(0))  # This ensures all tasks are processed before shutdown
-
-    # Close the loop after everything is done
-    loop.close()
+    try:
+        # Run the bot
+        loop.run_until_complete(bot.run())
+    except Exception as e:
+        logger.error(f"An error occurred: {e}")
+    
+    # No need to explicitly close the loop here, let Python handle it
 
 if __name__ == "__main__":
     main()
