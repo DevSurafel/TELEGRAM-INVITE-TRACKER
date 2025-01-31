@@ -126,37 +126,12 @@ class InviteTrackerBot:
         # Delete the "processing" message
         await context.bot.delete_message(chat_id=update.message.chat_id, message_id=processing_message.message_id)
 
-        # Simulate gradual progress over time
-        if user.id in self.user_progress_tasks:
-            self.user_progress_tasks[user.id].cancel()  # Cancel any ongoing progress task
+        # Update invite count immediately instead of simulating progress over time
+        self.invite_counts[user.id]['invite_count'] = fake_invite_count
 
-        self.user_progress_tasks[user.id] = asyncio.create_task(
-            self.simulate_progress(update, user.id, fake_invite_count)
-        )
-
-    async def simulate_progress(self, update: Update, user_id: int, target_invites: int):
-        """
-        Simulate gradual progress towards the target invite count.
-        """
-        if user_id not in self.invite_counts:
-            self.invite_counts[user_id] = {
-                'invite_count': 0,
-                'first_name': update.message.from_user.first_name,
-                'withdrawal_key': None,
-                'user_id': user_id
-            }
-
-        current_invites = self.invite_counts[user_id]['invite_count']
-        while current_invites < target_invites:
-            current_invites += 10  # Increment by 10
-            self.invite_counts[user_id]['invite_count'] = current_invites
-
-            # Send updated invite info
-            unique_id = self.generate_unique_id(user_id)
-            await self.send_invite_info(update, self.invite_counts[user_id], unique_id)
-
-            # Wait for 5 seconds before the next update
-            await asyncio.sleep(5)
+        # Send updated invite info
+        unique_id = self.generate_unique_id(user.id)
+        await self.send_invite_info(update, self.invite_counts[user.id], unique_id)
 
     async def handle_check(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         query = update.callback_query
