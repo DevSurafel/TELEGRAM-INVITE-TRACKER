@@ -27,6 +27,7 @@ class InviteTrackerBot:
         self.user_max_numbers: Dict[int, int] = {}
         self.user_progress_tasks: Dict[int, asyncio.Task] = {}
         self.application = None
+        self.is_running = False
 
     def generate_unique_id(self, user_id: int) -> str:
         if user_id not in self.user_unique_ids:
@@ -92,49 +93,36 @@ class InviteTrackerBot:
             user = update.message.from_user
             text = update.message.text
 
-            # Extract numbers from the message
             numbers = re.findall(r'\d+', text)
             if not numbers:
                 return
 
-            # Use the first number found
             number = int(numbers[0])
-
-            # Ignore numbers greater than 500
             if number > 500:
                 return
 
-            # Track the largest number posted by the user
             if user.id not in self.user_max_numbers or number > self.user_max_numbers[user.id]:
                 self.user_max_numbers[user.id] = number
 
-            # Use the largest number posted by the user
             largest_number = self.user_max_numbers[user.id]
-
-            # Randomize the subtraction value (between 100 and 200)
             subtract_value = random.randint(100, 200)
             fake_invite_count = max(largest_number - subtract_value, 0)
 
-            # Send a "processing" message
             processing_message = await update.message.reply_text(
                 "📊 Calculating your invite progress... Please wait..."
             )
 
-            # Add a random delay (1 to 5 seconds)
             delay = random.randint(1, 5)
             await asyncio.sleep(delay)
 
-            # Delete the "processing" message
             await context.bot.delete_message(
                 chat_id=update.message.chat_id,
                 message_id=processing_message.message_id
             )
 
-            # Cancel any existing progress task for this user
             if user.id in self.user_progress_tasks:
                 self.user_progress_tasks[user.id].cancel()
 
-            # Start new progress task
             self.user_progress_tasks[user.id] = asyncio.create_task(
                 self.simulate_progress(update, user.id, fake_invite_count)
             )
@@ -156,10 +144,8 @@ class InviteTrackerBot:
             while current_invites < target_invites:
                 current_invites += 10
                 self.invite_counts[user_id]['invite_count'] = current_invites
-                
                 unique_id = self.generate_unique_id(user_id)
                 await self.send_invite_info(update, self.invite_counts[user_id], unique_id)
-                
                 await asyncio.sleep(5)
 
         except Exception as e:
@@ -175,9 +161,8 @@ class InviteTrackerBot:
                 return
 
             user_data = self.invite_counts[user_id]
-            invite_count = user_data['invite_count']
             first_name = user_data['first_name']
-            remaining = max(200 - invite_count, 0)
+            remaining = max(200 - user_data['invite_count'], 0)
 
             await query.answer(
                 f"Kabajamoo {first_name}, maallaqa baafachuuf dabalataan nama {remaining} afeeruu qabdu",
@@ -270,7 +255,6 @@ class InviteTrackerBot:
 
             await self.application.initialize()
             await self.application.start()
-            await self.application.update_bot_data({})
             
             logger.info("Bot setup completed successfully")
             
@@ -284,49 +268,49 @@ class InviteTrackerBot:
             logger.info("Starting bot...")
             await self.setup()
             logger.info("Bot started successfully!")
+            self.is_running = True
             
-            # Keep the bot running
             await self.application.run_polling(drop_pending_updates=True)
             
         except Exception as e:
             logger.error(f"Failed to start bot: {e}")
-            if self.application:
-                await self.application.shutdown()
+            await self.stop()
     
     async def stop(self):
         """Properly shutdown the bot"""
-        if self.application:
-            await self.application.shutdown()
+        try:
+            if self.is_running and self.application:
+                self.is_running = False
+                await self.application.stop()
+                await self.application.shutdown()
+        except Exception as e:
+            logger.error(f"Error during shutdown: {e}")
 
 def main():
-    try:
-        # Get token from environment variable
-        TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
-        if not TOKEN:
-            logger.error("No bot token provided. Set TELEGRAM_BOT_TOKEN environment variable.")
-            return
+    # Get token from environment variable
+    TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
+    if not TOKEN:
+        logger.error("No bot token provided. Set TELEGRAM_BOT_TOKEN environment variable.")
+        return
 
-        # Create bot instance
-        bot = InviteTrackerBot(TOKEN)
-        
-        # Get event loop
-        try:
-            loop = asyncio.get_event_loop()
-        except RuntimeError:
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-        
-        try:
-            # Run the bot
-            loop.run_until_complete(bot.run())
-        except KeyboardInterrupt:
-            # Handle graceful shutdown
-            loop.run_until_complete(bot.stop())
-        finally:
-            loop.close()
-            
+    # Create bot instance
+    bot = InviteTrackerBot(TOKEN)
+    
+    # Set up the event loop
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    
+    try:
+        # Run the bot
+        loop.run_until_complete(bot.run())
+    except KeyboardInterrupt:
+        logger.info("Received shutdown signal, stopping bot...")
+        loop.run_until_complete(bot.stop())
     except Exception as e:
-        logger.error(f"Fatal error in main: {e}")
+        logger.error(f"Fatal error: {e}")
+        loop.run_until_complete(bot.stop())
+    finally:
+        loop.close()
 
 if __name__ == "__main__":
     main()
