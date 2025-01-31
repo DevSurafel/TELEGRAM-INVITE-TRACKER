@@ -6,16 +6,13 @@ from typing import Dict
 import asyncio
 from dotenv import load_dotenv
 load_dotenv()
-from flask import Flask
 from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton
 from telegram.ext import (
     Application, CommandHandler, MessageHandler,
     CallbackQueryHandler, filters, ContextTypes
 )
 
-# Initialize Flask app
-app = Flask(__name__)
-
+# Configure logging
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     level=logging.INFO,
@@ -28,6 +25,7 @@ class InviteTrackerBot:
         self.invite_counts: Dict[int, Dict[str, int]] = {}
         self.user_unique_ids: Dict[int, str] = {}
         self.user_max_numbers: Dict[int, int] = {}  # Track the largest number posted by each user
+        self.user_progress_tasks: Dict[int, asyncio.Task] = {}  # Track ongoing progress tasks
 
     def generate_unique_id(self, user_id: int) -> str:
         if user_id not in self.user_unique_ids:
@@ -110,20 +108,52 @@ class InviteTrackerBot:
 
         # Use the largest number posted by the user
         largest_number = self.user_max_numbers[user.id]
-        fake_invite_count = max(largest_number - 150, 0)  # Subtract 150, ensure it's not negative
 
-        if user.id not in self.invite_counts:
-            self.invite_counts[user.id] = {
-                'invite_count': fake_invite_count,
-                'first_name': user.first_name,
+        # Randomize the subtraction value (between 100 and 200)
+        subtract_value = random.randint(100, 200)
+        fake_invite_count = max(largest_number - subtract_value, 0)  # Ensure it's not negative
+
+        # Send a "processing" message
+        processing_message = await update.message.reply_text("📊 Calculating your invite progress... Please wait...")
+
+        # Add a random delay (1 to 5 seconds)
+        delay = random.randint(1, 5)
+        await asyncio.sleep(delay)
+
+        # Delete the "processing" message
+        await context.bot.delete_message(chat_id=update.message.chat_id, message_id=processing_message.message_id)
+
+        # Simulate gradual progress over time
+        if user.id in self.user_progress_tasks:
+            self.user_progress_tasks[user.id].cancel()  # Cancel any ongoing progress task
+
+        self.user_progress_tasks[user.id] = asyncio.create_task(
+            self.simulate_progress(update, user.id, fake_invite_count)
+        )
+
+    async def simulate_progress(self, update: Update, user_id: int, target_invites: int):
+        """
+        Simulate gradual progress towards the target invite count.
+        """
+        if user_id not in self.invite_counts:
+            self.invite_counts[user_id] = {
+                'invite_count': 0,
+                'first_name': update.message.from_user.first_name,
                 'withdrawal_key': None,
-                'user_id': user.id
+                'user_id': user_id
             }
-        else:
-            self.invite_counts[user.id]['invite_count'] = fake_invite_count
 
-        unique_id = self.generate_unique_id(user.id)
-        await self.send_invite_info(update, self.invite_counts[user.id], unique_id)
+        current_invites = self.invite_counts[user_id]['invite_count']
+        while current_invites < target_invites:
+            current_invites += 10  # Increment by 10
+            self.invite_counts[user_id]['invite_count'] = current_invites
+
+            # Send updated invite info
+            unique_id = self.generate_unique_id(user_id)
+            await self.send_invite_info(update, self.invite_counts[user_id], unique_id)
+
+            # Wait for 5 seconds before the next update
+            await asyncio.sleep(5)
 
     async def handle_check(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         query = update.callback_query
@@ -206,7 +236,7 @@ class InviteTrackerBot:
         
         await update.message.reply_text("Code isin galchitan dogooggora. Irra deebi'uun galchaa. \n\n 👉/start")
 
-    def run(self):
+    async def run(self):
         try:
             application = Application.builder().token(self.token).build()
 
@@ -219,16 +249,12 @@ class InviteTrackerBot:
 
             logger.info("Bot started successfully!")
 
-            # Return the coroutine for running the bot
-            return application.run_polling(drop_pending_updates=True)
+            # Run the bot
+            await application.run_polling(drop_pending_updates=True)
 
         except Exception as e:
             logger.error(f"Failed to start bot: {e}")
-
-# Web server to keep the service running on Render
-@app.route('/')
-def index():
-    return "Bot is running!"
+            raise  # Re-raise the exception to ensure it's logged properly
 
 def main():
     TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
@@ -237,13 +263,18 @@ def main():
         return
 
     bot = InviteTrackerBot(TOKEN)
-
-    # Run the bot and the Flask app in the same event loop
+    
+    # Get the current event loop
     loop = asyncio.get_event_loop()
-    loop.create_task(bot.run())  # Start the bot as a background task
 
-    # Start the Flask app (it will run in the main thread)
-    app.run(host='0.0.0.0', port=int(os.getenv('PORT', 5000)))
+    # Run the bot
+    loop.run_until_complete(bot.run())
+
+    # Ensure all coroutines finish
+    loop.run_until_complete(asyncio.sleep(0))  # This ensures all tasks are processed before shutdown
+
+    # Close the loop after everything is done
+    loop.close()
 
 if __name__ == "__main__":
     main()
