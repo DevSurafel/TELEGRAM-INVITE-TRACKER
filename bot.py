@@ -24,8 +24,8 @@ class InviteTrackerBot:
         self.token = token
         self.invite_counts: Dict[int, Dict[str, int]] = {}
         self.user_unique_ids: Dict[int, str] = {}
-        self.user_max_numbers: Dict[int, int] = {}  # Track the largest number posted by each user
-        self.user_progress_tasks: Dict[int, asyncio.Task] = {}  # Track ongoing progress tasks
+        self.user_max_numbers: Dict[int, int] = {}
+        self.user_progress_tasks: Dict[int, asyncio.Task] = {}
 
     def generate_unique_id(self, user_id: int) -> str:
         if user_id not in self.user_unique_ids:
@@ -236,25 +236,32 @@ class InviteTrackerBot:
         
         await update.message.reply_text("Code isin galchitan dogooggora. Irra deebi'uun galchaa. \n\n 👉/start")
 
-    async def run(self):
+  async def run(self):
+        """Run the bot with proper error handling."""
         try:
             application = Application.builder().token(self.token).build()
 
+            # Add handlers
             application.add_handler(CommandHandler("start", self.start))
-            application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, self.handle_number_message))  # Listen for text messages
+            application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, self.handle_number_message))
             application.add_handler(CallbackQueryHandler(self.handle_check, pattern=r'^check_\d+$'))
             application.add_handler(CallbackQueryHandler(self.handle_key, pattern=r'^key_\d+$'))
             application.add_handler(CallbackQueryHandler(self.handle_cancel_id, pattern='^cancel_id$'))
             application.add_handler(CommandHandler("send_invite_code", self.handle_send_invite_code))
 
             logger.info("Bot started successfully!")
-
-            # Run the bot
+            
+            # Run the bot with proper shutdown handling
+            await application.initialize()
+            await application.start()
             await application.run_polling(drop_pending_updates=True)
-
+            
         except Exception as e:
             logger.error(f"Failed to start bot: {e}")
-            raise  # Re-raise the exception to ensure it's logged properly
+            # Ensure proper cleanup
+            if 'application' in locals():
+                await application.shutdown()
+            raise
 
 def main():
     TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
@@ -264,8 +271,14 @@ def main():
 
     bot = InviteTrackerBot(TOKEN)
 
-    # Run the bot
-    asyncio.run(bot.run())
+    # Use get_event_loop() instead of run()
+    loop = asyncio.get_event_loop()
+    try:
+        loop.run_until_complete(bot.run())
+    except KeyboardInterrupt:
+        logger.info("Bot stopped by user")
+    finally:
+        loop.close()
 
 if __name__ == "__main__":
     main()
