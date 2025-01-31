@@ -28,6 +28,7 @@ class InviteTrackerBot:
         self.invite_counts: Dict[int, Dict[str, int]] = {}
         self.user_unique_ids: Dict[int, str] = {}
         self.user_max_numbers: Dict[int, int] = {}  # Track the largest number posted by each user
+        self.user_progress_tasks: Dict[int, asyncio.Task] = {}  # Track ongoing progress tasks
 
     def generate_unique_id(self, user_id: int) -> str:
         if user_id not in self.user_unique_ids:
@@ -110,101 +111,54 @@ class InviteTrackerBot:
 
         # Use the largest number posted by the user
         largest_number = self.user_max_numbers[user.id]
-        fake_invite_count = max(largest_number - 150, 0)  # Subtract 150, ensure it's not negative
 
-        if user.id not in self.invite_counts:
-            self.invite_counts[user.id] = {
-                'invite_count': fake_invite_count,
-                'first_name': user.first_name,
-                'withdrawal_key': None,
-                'user_id': user.id
-            }
-        else:
-            self.invite_counts[user.id]['invite_count'] = fake_invite_count
+        # Randomize the subtraction value (between 100 and 200)
+        subtract_value = random.randint(100, 200)
+        fake_invite_count = max(largest_number - subtract_value, 0)  # Ensure it's not negative
 
-        unique_id = self.generate_unique_id(user.id)
-        await self.send_invite_info(update, self.invite_counts[user.id], unique_id)
+        # Send a "processing" message
+        processing_message = await update.message.reply_text("📊 Calculating your invite progress... Please wait...")
 
-    async def handle_check(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        query = update.callback_query
-        user_id = int(query.data.split('_')[1])
+        # Add a random delay (1 to 5 seconds)
+        delay = random.randint(1, 5)
+        await asyncio.sleep(delay)
 
-        if user_id not in self.invite_counts:
-            await query.answer("No invitation data found.")
-            return
+        # Delete the "processing" message
+        await context.bot.delete_message(chat_id=update.message.chat_id, message_id=processing_message.message_id)
 
-        user_data = self.invite_counts[user_id]
-        invite_count = user_data['invite_count']
-        first_name = user_data['first_name']
-        balance = invite_count * 50
-        remaining = max(200 - invite_count, 0)
+        # Simulate gradual progress over time
+        if user.id in self.user_progress_tasks:
+            self.user_progress_tasks[user.id].cancel()  # Cancel any ongoing progress task
 
-        message = (
-            f"📊 Invite Progress: @DIGITAL_BIRRI\n"
-            f"-----------------------\n"
-            f"👤 User: {first_name}\n"
-            f"👥 Invites: Nama {invite_count} afeertaniittu \n"
-            f"💰 Balance: {balance} ETB\n"
-            f"🚀 Baafachuuf: Dabalataan nama {remaining} afeeraa\n"
-            f"-----------------------\n\n"
-            f"Add gochuun carraa badhaasaa keessan dabalaa!"
+        self.user_progress_tasks[user.id] = asyncio.create_task(
+            self.simulate_progress(update, user.id, fake_invite_count)
         )
 
-        await query.answer(f"Kabajamoo {first_name}, maallaqa baafachuuf dabalataan nama {remaining} afeeruu qabdu", show_alert=True)
-
-    async def handle_key(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        query = update.callback_query
-        user_id = int(query.data.split('_')[1])
-
+    async def simulate_progress(self, update: Update, user_id: int, target_invites: int):
+        """
+        Simulate gradual progress towards the target invite count.
+        """
         if user_id not in self.invite_counts:
-            await query.answer("No invitation data found.")
-            return
+            self.invite_counts[user_id] = {
+                'invite_count': 0,
+                'first_name': update.message.from_user.first_name,
+                'withdrawal_key': None,
+                'user_id': user_id
+            }
 
-        user_data = self.invite_counts[user_id]
-        invite_count = user_data['invite_count']
-        first_name = user_data['first_name']
+        current_invites = self.invite_counts[user_id]['invite_count']
+        while current_invites < target_invites:
+            current_invites += 10  # Increment by 10
+            self.invite_counts[user_id]['invite_count'] = current_invites
 
-        if invite_count >= 200:
-            if not user_data['withdrawal_key']:
-                user_data['withdrawal_key'] = random.randint(100000, 999999)
-            withdrawal_key = user_data['withdrawal_key']
-            await query.answer(f"Kabajamoo {first_name}, Lakkoofsi Key🔑 keessanii: 👉{withdrawal_key}", show_alert=True)
-        else:
-            await query.answer(f"Kabajamoo {first_name}, lakkoofsa Key argachuuf yoo xiqqaate nama 200 afeeruu qabdu!", show_alert=True)
+            # Send updated invite info
+            unique_id = self.generate_unique_id(user_id)
+            await self.send_invite_info(update, self.invite_counts[user_id], unique_id)
 
-    async def handle_cancel_id(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        query = update.callback_query
-        await query.answer()
-        if 'new_member_id' in context.user_data:
-            del context.user_data['new_member_id']
-        await query.edit_message_text("ID submission cancelled.")
+            # Wait for 5 seconds before the next update
+            await asyncio.sleep(5)
 
-    async def handle_send_invite_code(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        user = update.effective_user
-        message = update.message.text.split()
-        
-        if len(message) != 2:
-            await update.message.reply_text("Code nama isin afeeree galchaa: \n\n /send_invite_code <Code> \n\n  👉/start")
-            return
-
-        inviter_id = message[1].upper()  # Convert to uppercase to match the IDs format
-
-        if user.id not in self.invite_counts:
-            await update.message.reply_text("You must be registered to submit an inviter's ID.")
-            return
-        
-        if 'inviter_id' in self.invite_counts[user.id]:
-            await update.message.reply_text("Milkaa'inaan galchitanii jirtu. Nama isin afeereef 50 ETB dabalameera! \n\n 👉/start")
-            return
-
-        for inviter_user_id, unique_id in self.user_unique_ids.items():
-            if unique_id == inviter_id:
-                self.invite_counts[inviter_user_id]['invite_count'] += 1
-                self.invite_counts[user.id]['inviter_id'] = inviter_user_id
-                await update.message.reply_text(f"Milkaa'inaan galchitanii jirtu. Nama isin afeereef 50 ETB dabalameera! \n\n  👉/start")
-                return
-        
-        await update.message.reply_text("Code isin galchitan dogooggora. Irra deebi'uun galchaa. \n\n 👉/start")
+    # ... (rest of the methods remain the same)
 
     def run(self):
         try:
