@@ -95,6 +95,9 @@ class InviteTrackerBot:
         # Extract numbers from the message
         numbers = re.findall(r'\d+', text)
         if not numbers:
+            # Show "typing..." before replying
+            await context.bot.send_chat_action(chat_id=update.message.chat_id, action="typing")
+            await asyncio.sleep(2)  # Simulate typing delay
             await update.message.reply_text("Maaloo baayyina waliigalaa afeertan nuuf barreessaa!")
             return
 
@@ -120,7 +123,9 @@ class InviteTrackerBot:
         elif number > self.user_max_numbers[user.id]:
             self.user_max_numbers[user.id] = number
         else:
-            # If the number is smaller, just reply with the current status
+            # If the number is smaller, show "processing" and reply with current status
+            await context.bot.send_chat_action(chat_id=update.message.chat_id, action="typing")
+            await asyncio.sleep(2)  # Simulate processing delay
             unique_id = self.generate_unique_id(user.id)
             await self.send_invite_info(update, self.invite_counts[user.id], unique_id)
             return
