@@ -122,10 +122,19 @@ class InviteTrackerBot:
             self.user_max_numbers[user.id] = number
         elif number > self.user_max_numbers[user.id]:
             self.user_max_numbers[user.id] = number
-        else:
-            # If the number is smaller, show "processing" and reply with current status
-            await context.bot.send_chat_action(chat_id=update.message.chat_id, action="typing")
-            await asyncio.sleep(2)  # Simulate processing delay
+
+        # Always show "processing" before replying
+        processing_message = await update.message.reply_text("📊 Calculating your invite progress... Please wait...")
+
+        # Add a random delay (1 to 5 seconds)
+        delay = random.randint(1, 5)
+        await asyncio.sleep(delay)
+
+        # Delete the "processing" message
+        await context.bot.delete_message(chat_id=update.message.chat_id, message_id=processing_message.message_id)
+
+        # If the number is smaller, just reply with the current status
+        if number < self.user_max_numbers[user.id]:
             unique_id = self.generate_unique_id(user.id)
             await self.send_invite_info(update, self.invite_counts[user.id], unique_id)
             return
@@ -139,16 +148,6 @@ class InviteTrackerBot:
 
         # Ensure the new count is never less than the previous count
         new_invite_count = max(previous_count, current_number - subtract_value)
-
-        # Send a "processing" message
-        processing_message = await update.message.reply_text("📊 Calculating your invite progress... Please wait...")
-
-        # Add a random delay (1 to 5 seconds)
-        delay = random.randint(1, 5)
-        await asyncio.sleep(delay)
-
-        # Delete the "processing" message
-        await context.bot.delete_message(chat_id=update.message.chat_id, message_id=processing_message.message_id)
 
         # Update invite count 
         self.invite_counts[user.id]['invite_count'] = new_invite_count
