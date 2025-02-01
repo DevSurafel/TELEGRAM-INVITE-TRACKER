@@ -103,7 +103,6 @@ class InviteTrackerBot:
 
         # Ignore numbers greater than 500
         if number > 500:
-            await update.message.reply_text("Numbers greater than 500 are not allowed.")
             return
 
         # Ensure user is registered before proceeding
@@ -120,8 +119,13 @@ class InviteTrackerBot:
             self.user_max_numbers[user.id] = number
         elif number > self.user_max_numbers[user.id]:
             self.user_max_numbers[user.id] = number
+        else:
+            # If the number is smaller, just reply with the current status
+            unique_id = self.generate_unique_id(user.id)
+            await self.send_invite_info(update, self.invite_counts[user.id], unique_id)
+            return
 
-        # Always use the largest number posted by the user for calculations
+        # Use the largest number posted by the user for calculations
         current_number = self.user_max_numbers[user.id]
         previous_count = self.invite_counts[user.id]['invite_count']
 
