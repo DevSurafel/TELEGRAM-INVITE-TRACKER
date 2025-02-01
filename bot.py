@@ -95,13 +95,15 @@ class InviteTrackerBot:
         # Extract numbers from the message
         numbers = re.findall(r'\d+', text)
         if not numbers:
-            return  # Ignore messages without numbers
+            await update.message.reply_text("Please send a valid number.")
+            return
 
         # Use the first number found
         number = int(numbers[0])
 
         # Ignore numbers greater than 500
         if number > 500:
+            await update.message.reply_text("Numbers greater than 500 are not allowed.")
             return
 
         # Ensure user is registered before proceeding
@@ -118,11 +120,8 @@ class InviteTrackerBot:
             self.user_max_numbers[user.id] = number
         elif number > self.user_max_numbers[user.id]:
             self.user_max_numbers[user.id] = number
-        else:
-            # If the number is not greater than the max, do not proceed with the update
-            return
 
-        # Use the new number to calculate the invite count
+        # Always use the largest number posted by the user for calculations
         current_number = self.user_max_numbers[user.id]
         previous_count = self.invite_counts[user.id]['invite_count']
 
