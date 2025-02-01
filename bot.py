@@ -95,7 +95,7 @@ class InviteTrackerBot:
         # Extract numbers from the message
         numbers = re.findall(r'\d+', text)
         if not numbers:
-            await update.message.reply_text("Please send a valid number.")
+            await update.message.reply_text("Baayyina waliigalaa afeertan qofa nuuf barreessaa!")
             return
 
         # Use the first number found
