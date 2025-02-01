@@ -98,7 +98,15 @@ class InviteTrackerBot:
             # Show "typing..." before replying
             await context.bot.send_chat_action(chat_id=update.message.chat_id, action="typing")
             await asyncio.sleep(2)  # Simulate typing delay
-            await update.message.reply_text("Maaloo baayyina waliigalaa afeertan nuuf barreessaa!")
+
+            # Randomly select one of the five statements
+            responses = [
+                "Maaloo baayyina waliigala nama afeertanii barreessaa! ",
+                "Maaloo baayyina waliigalaa afeertan nuuf barreessaa!",
+                "Waliigalatti nama meeqa afeertanii jirtu?"
+            ]
+            response = random.choice(responses)
+            await update.message.reply_text(response)
             return
 
         # Use the first number found
