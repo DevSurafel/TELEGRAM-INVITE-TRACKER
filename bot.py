@@ -208,7 +208,7 @@ class InviteTrackerBot:
         message = update.message.text.split()
         
         if len(message) != 2:
-            await update.message.reply_text("Code nama isin afeeree galchaa: \n\n /send_invite_code <Code> \n\n  👉/start")
+            await update.message.reply_text("Baayyina nama afeertanii baruuf \n\n 👉/start@Invite_birr_bot \n")
             return
 
         inviter_id = message[1].upper()  # Convert to uppercase to match the IDs format
@@ -228,7 +228,7 @@ class InviteTrackerBot:
                 await update.message.reply_text(f"Milkaa'inaan galchitanii jirtu. Nama isin afeereef 50 ETB dabalameera! \n\n  👉/start")
                 return
         
-        await update.message.reply_text("Code isin galchitan dogooggora. Irra deebi'uun galchaa. \n\n 👉/start")
+        await update.message.reply_text("Baayyina nama afeertanii baruuf \n\n 👉/start@Invite_birr_bot \n")
 
     async def run(self):
         try:
