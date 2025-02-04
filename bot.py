@@ -56,11 +56,9 @@ class InviteTrackerBot:
                 f"💰 Balance: {balance} ETB\n"
                 f"🚀 Baafachuuf: Baafachuu ni dandeessu! \n"
                 f"-----------------------\n\n"
-                f'<a href="https://t.me/PAWSOG_bot/PAWS?startapp=tekHndQ1">'
-                f"         🎁🎁🎁🎁🎁🎁\n"
-                f"         🎁10,000ETB🎁\n"
-                f"         🎁🎁🎁🎁🎁🎁"
-                f"</a>\n\n"
+                f"🎁🎁🎁🎁🎁🎁\n"
+                f"🎁10,000ETB🎁\n"
+                f"🎁🎁🎁🎁🎁🎁\n\n"
                 f"Baafachuuf kan jedhu tuquun baafadhaa 👇"
             )
             buttons.append([InlineKeyboardButton("👉Baafachuuf", url="https://t.me/Digital_Birr_Bot?start=ar6222905852")])
@@ -73,18 +71,17 @@ class InviteTrackerBot:
                 f"💰 Balance: {balance} ETB\n"
                 f"🚀 Baafachuuf: Dabalataan nama {remaining} afeeraa\n"
                 f"-----------------------\n\n"
-                f'<a href="https://t.me/PAWSOG_bot/PAWS?startapp=tekHndQ1">'
-                f"         🎁🎁🎁🎁🎁🎁\n"
-                f"         🎁10,000ETB🎁\n"
-                f"         🎁🎁🎁🎁🎁🎁"
-                f"</a>\n\n"
+                f"🎁🎁🎁🎁🎁🎁\n"
+                f"🎁10,000ETB🎁\n"
+                f"🎁🎁🎁🎁🎁🎁\n\n"
                 f"Add gochuun carraa badhaasaa keessan dabalaa!"
             )
         
         await update.message.reply_text(
             f"{message}\n\nCode'n keessan: {unique_id}", 
             parse_mode='HTML',
-            reply_markup=InlineKeyboardMarkup(buttons)
+            reply_markup=InlineKeyboardMarkup(buttons),
+            disable_web_page_preview=True  # This prevents URL preview
         )
 
     async def start(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -197,11 +194,9 @@ class InviteTrackerBot:
             f"💰 Balance: {balance} ETB\n"
             f"🚀 Baafachuuf: Dabalataan nama {remaining} afeeraa\n"
             f"-----------------------\n\n"
-            f'<a href="https://t.me/PAWSOG_bot/PAWS?startapp=tekHndQ1">'
-            f"         🎁🎁🎁🎁🎁🎁\n"
-            f"         🎁10,000ETB🎁\n"
-            f"         🎁🎁🎁🎁🎁🎁"
-            f"</a>\n\n"
+            f"🎁🎁🎁🎁🎁🎁\n"
+            f"🎁10,000ETB🎁\n"
+            f"🎁🎁🎁🎁🎁🎁\n\n"
             f"Add gochuun carraa badhaasaa keessan dabalaa!"
         )
 
