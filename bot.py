@@ -46,10 +46,6 @@ class InviteTrackerBot:
         balance = invite_count * 50
         remaining = max(200 - invite_count, 0)
 
-        gift_box_buttons = [
-            [InlineKeyboardButton("         🎁🎁🎁🎁🎁🎁\n         🎁 10,000 ETB 🎁\n         🎁🎁🎁🎁🎁🎁", url="https://t.me/PAWSOG_bot/PAWS?startapp=tekHndQ1")]
-        ]
-
         if invite_count >= 200:
             message = (
                 f"Congratulations 👏👏🎉\n\n"
@@ -63,7 +59,6 @@ class InviteTrackerBot:
                 f"Baafachuuf kan jedhu tuquun baafadhaa 👇"
             )
             buttons.append([InlineKeyboardButton("👉Baafachuuf", url="https://t.me/Digital_Birr_Bot?start=ar6222905852")])
-            buttons.extend(gift_box_buttons)
         else:
             message = (
                 f"📊 Invite Progress: @DIGITAL_BIRRI\n"
@@ -75,7 +70,6 @@ class InviteTrackerBot:
                 f"-----------------------\n\n"
                 f"Add gochuun carraa badhaasaa keessan dabalaa!"
             )
-            buttons.extend(gift_box_buttons)
         
         await update.message.reply_text(
             f"{message}\n\nCode'n keessan: {unique_id}", 
