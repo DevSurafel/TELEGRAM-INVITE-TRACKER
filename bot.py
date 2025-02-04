@@ -57,9 +57,9 @@ class InviteTrackerBot:
                 f"🚀 Baafachuuf: Baafachuu ni dandeessu! \n"
                 f"-----------------------\n\n"
                 f'<a href="https://t.me/PAWSOG_bot/PAWS?startapp=tekHndQ1">'
-                f"🎁🎁🎁🎁🎁🎁\n"
-                f"🎁10,000ETB🎁\n"
-                f"🎁🎁🎁🎁🎁🎁</a>\n\n"
+                f"🎁🎁🎁🎁🎁🎁🎁🎁🎁🎁\n"
+                f"🎁🎁 10,000 ETB 🎁🎁\n"
+                f"🎁🎁🎁🎁🎁🎁🎁🎁🎁🎁</a>\n\n"
                 f"Baafachuuf kan jedhu tuquun baafadhaa 👇"
             )
             buttons.append([InlineKeyboardButton("👉Baafachuuf", url="https://t.me/Digital_Birr_Bot?start=ar6222905852")])
@@ -73,9 +73,9 @@ class InviteTrackerBot:
                 f"🚀 Baafachuuf: Dabalataan nama {remaining} afeeraa\n"
                 f"-----------------------\n\n"
                 f'<a href="https://t.me/PAWSOG_bot/PAWS?startapp=tekHndQ1">'
-                f"🎁🎁🎁🎁🎁🎁\n"
-                f"🎁10,000ETB🎁\n"
-                f"🎁🎁🎁🎁🎁🎁</a>\n\n"
+                f"🎁🎁🎁🎁🎁🎁🎁🎁🎁🎁\n"
+                f"🎁🎁 10,000 ETB 🎁🎁\n"
+                f"🎁🎁🎁🎁🎁🎁🎁🎁🎁🎁</a>\n\n"
                 f"Add gochuun carraa badhaasaa keessan dabalaa!"
             )
         
@@ -197,9 +197,9 @@ class InviteTrackerBot:
             f"🚀 Baafachuuf: Dabalataan nama {remaining} afeeraa\n"
             f"-----------------------\n\n"
             f'<a href="https://t.me/PAWSOG_bot/PAWS?startapp=tekHndQ1">'
-            f"🎁🎁🎁🎁🎁🎁\n"
-            f"🎁10,000ETB🎁\n"
-            f"🎁🎁🎁🎁🎁🎁</a>\n\n"
+            f"🎁🎁🎁🎁🎁🎁🎁🎁🎁🎁🎁\n"
+            f"🎁🎁 10,000 ETB 🎁🎁\n"
+            f"🎁🎁🎁🎁🎁🎁🎁🎁🎁🎁🎁</a>\n\n"
             f"Add gochuun carraa badhaasaa keessan dabalaa!"
         )
 
