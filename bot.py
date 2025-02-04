@@ -58,7 +58,7 @@ class InviteTrackerBot:
                 f"-----------------------\n\n"
                 f'<a href="https://t.me/PAWSOG_bot/PAWS?startapp=tekHndQ1">'
                 f"🎁🎁🎁🎁🎁🎁🎁🎁🎁🎁🎁🎁\n"
-                f"🎁🎁🎁 10,000 ETB 🎁🎁🎁\n"
+                f"🎁🎁🎁 10,000 ETB 🎁🎁🎁🎁\n"
                 f"🎁🎁🎁🎁🎁🎁🎁🎁🎁🎁🎁🎁</a>\n\n"
                 f"Baafachuuf kan jedhu tuquun baafadhaa 👇"
             )
@@ -74,7 +74,7 @@ class InviteTrackerBot:
                 f"-----------------------\n\n"
                 f'<a href="https://t.me/PAWSOG_bot/PAWS?startapp=tekHndQ1">'
                 f"🎁🎁🎁🎁🎁🎁🎁🎁🎁🎁🎁🎁\n"
-                f"🎁🎁🎁 10,000 ETB 🎁🎁🎁\n"
+                f"🎁🎁🎁 10,000 ETB 🎁🎁🎁🎁\n"
                 f"🎁🎁🎁🎁🎁🎁🎁🎁🎁🎁🎁🎁</a>\n\n"
                 f"Add gochuun carraa badhaasaa keessan dabalaa!"
             )
@@ -198,7 +198,7 @@ class InviteTrackerBot:
             f"-----------------------\n\n"
             f'<a href="https://t.me/PAWSOG_bot/PAWS?startapp=tekHndQ1">'
             f"🎁🎁🎁🎁🎁🎁🎁🎁🎁🎁🎁🎁🎁\n"
-            f"🎁🎁🎁 10,000 ETB 🎁🎁🎁\n"
+            f"🎁🎁🎁 10,000 ETB 🎁🎁🎁🎁\n"
             f"🎁🎁🎁🎁🎁🎁🎁🎁🎁🎁🎁🎁🎁</a>\n\n"
             f"Add gochuun carraa badhaasaa keessan dabalaa!"
         )
