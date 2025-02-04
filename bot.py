@@ -255,12 +255,12 @@ class InviteTrackerBot:
         
         await update.message.reply_text("Baayyina nama afeertanii baruuf \n\n 👉/start@Invite_birr_bot \n")
 
-  async def run(self):
+    async def run(self):
         try:
             application = Application.builder().token(self.token).build()
 
             application.add_handler(CommandHandler("start", self.start))
-            application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, self.handle_number_message))  
+            application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, self.handle_number_message))
             application.add_handler(CallbackQueryHandler(self.handle_check, pattern=r'^check_\d+$'))
             application.add_handler(CallbackQueryHandler(self.handle_key, pattern=r'^key_\d+$'))
             application.add_handler(CallbackQueryHandler(self.handle_cancel_id, pattern='^cancel_id$'))
