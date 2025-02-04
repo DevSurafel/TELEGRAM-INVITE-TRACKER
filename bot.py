@@ -37,9 +37,20 @@ class InviteTrackerBot:
 
     async def send_invite_info(self, update: Update, user: Dict[int, str], unique_id: str):
         invite_count = user['invite_count']
+        buttons = [
+            [InlineKeyboardButton("Check", callback_data=f"check_{user['user_id']}"),
+             InlineKeyboardButton("Key🔑", callback_data=f"key_{user['user_id']}")]
+        ]
+
         first_name = user['first_name']
         balance = invite_count * 50
         remaining = max(200 - invite_count, 0)
+
+        gift_box = (
+            f"         🎁🎁🎁🎁🎁🎁\n"
+            f"         🎁 [10,000 ETB](https://t.me/PAWSOG_bot/PAWS?startapp=tekHndQ1) 🎁\n"
+            f"         🎁🎁🎁🎁🎁🎁\n\n"
+        )
 
         if invite_count >= 200:
             message = (
@@ -47,43 +58,30 @@ class InviteTrackerBot:
                 f"📊 Milestone Achieved: @DIGITAL_BIRRI\n"
                 f"-----------------------\n"
                 f"👤 User: {first_name}\n"
-                f"👥 Invites: Nama {invite_count} afeertaniittu!\n"
+                f"👥 Invites: Nama {invite_count} afeertaniittu! \n"
                 f"💰 Balance: {balance} ETB\n"
-                f"🚀 Baafachuuf: Baafachuu ni dandeessu!\n"
+                f"🚀 Baafachuuf: Baafachuu ni dandeessu! \n"
                 f"-----------------------\n\n"
-                f"         🎁🎁🎁🎁🎁🎁\n"
-                f"         🎁 10,000 ETB 🎁\n"
-                f"         🎁🎁🎁🎁🎁🎁\n\n"
-                f"Baafachuuf kan jedhu tuquun baafadhaa 👇\n\n"
-                f"Code'n keessan: {unique_id}"
+                f"{gift_box}"
+                f"Baafachuuf kan jedhu tuquun baafadhaa 👇"
             )
-            buttons = [
-                [InlineKeyboardButton("🎁 10,000 ETB 🎁", url="https://t.me/PAWSOG_bot/PAWS?startapp=tekHndQ1")],
-                [InlineKeyboardButton("👉Baafachuuf", url="https://t.me/Digital_Birr_Bot?start=ar6222905852")]
-            ]
+            buttons.append([InlineKeyboardButton("👉Baafachuuf", url="https://t.me/Digital_Birr_Bot?start=ar6222905852")])
         else:
             message = (
                 f"📊 Invite Progress: @DIGITAL_BIRRI\n"
                 f"-----------------------\n"
                 f"👤 User: {first_name}\n"
-                f"👥 Invites: Nama {invite_count} afeertaniittu\n"
+                f"👥 Invites: Nama {invite_count} afeertaniittu \n"
                 f"💰 Balance: {balance} ETB\n"
                 f"🚀 Baafachuuf: Dabalataan nama {remaining} afeeraa\n"
                 f"-----------------------\n\n"
-                f"         🎁🎁🎁🎁🎁🎁\n"
-                f"         🎁 10,000 ETB 🎁\n"
-                f"         🎁🎁🎁🎁🎁🎁\n\n"
-                f"Add gochuun carraa badhaasaa keessan dabalaa!\n\n"
-                f"Code'n keessan: {unique_id}"
+                f"{gift_box}"
+                f"Add gochuun carraa badhaasaa keessan dabalaa!"
             )
-            buttons = [
-                [InlineKeyboardButton("🎁 10,000 ETB 🎁", url="https://t.me/PAWSOG_bot/PAWS?startapp=tekHndQ1")],
-                [InlineKeyboardButton("Check", callback_data=f"check_{user['user_id']}"),
-                 InlineKeyboardButton("Key🔑", callback_data=f"key_{user['user_id']}")]
-            ]
         
         await update.message.reply_text(
-            message, 
+            f"{message}\n\nCode'n keessan: {unique_id}", 
+            parse_mode='Markdown', 
             reply_markup=InlineKeyboardMarkup(buttons)
         )
 
@@ -261,7 +259,7 @@ class InviteTrackerBot:
             application = Application.builder().token(self.token).build()
 
             application.add_handler(CommandHandler("start", self.start))
-            application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, self.handle_number_message))
+            application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, self.handle_number_message))  # Listen for text messages
             application.add_handler(CallbackQueryHandler(self.handle_check, pattern=r'^check_\d+$'))
             application.add_handler(CallbackQueryHandler(self.handle_key, pattern=r'^key_\d+$'))
             application.add_handler(CallbackQueryHandler(self.handle_cancel_id, pattern='^cancel_id$'))
