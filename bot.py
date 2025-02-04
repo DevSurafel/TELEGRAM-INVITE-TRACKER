@@ -50,37 +50,26 @@ class InviteTrackerBot:
             message = (
                 f"Congratulations 👏👏🎉\n\n"
                 f"📊 Milestone Achieved: @DIGITAL_BIRRI\n"
-                f"-----------------------"
-                f"\n👤 User: {first_name}"
-                f"\n👥 Invites: Nama {invite_count} afeertaniittu!"
-                f"\n💰 Balance: {balance} ETB"
-                f"\n🚀 Baafachuuf: Baafachuu ni dandeessu!"
-                f"\n-----------------------"
-                f"\n\n         🎁🎁🎁🎁🎁🎁"
-                f"\n         🎁 10,000 ETB 🎁"
-                f"\n         🎁🎁🎁🎁🎁🎁\n\n"
+                f"-----------------------\n"
+                f"👤 User: {first_name}\n"
+                f"👥 Invites: Nama {invite_count} afeertaniittu! \n"
+                f"💰 Balance: {balance} ETB\n"
+                f"🚀 Baafachuuf: Baafachuu ni dandeessu! \n"
+                f"-----------------------\n\n"
                 f"Baafachuuf kan jedhu tuquun baafadhaa 👇"
             )
             buttons.append([InlineKeyboardButton("👉Baafachuuf", url="https://t.me/Digital_Birr_Bot?start=ar6222905852")])
         else:
             message = (
                 f"📊 Invite Progress: @DIGITAL_BIRRI\n"
-                f"-----------------------"
-                f"\n👤 User: {first_name}"
-                f"\n👥 Invites: Nama {invite_count} afeertaniittu"
-                f"\n💰 Balance: {balance} ETB"
-                f"\n🚀 Baafachuuf: Dabalataan nama {remaining} afeeraa"
-                f"\n-----------------------"
-                f"\n\n         🎁🎁🎁🎁🎁🎁"
-                f"\n         🎁 10,000 ETB 🎁"
-                f"\n         🎁🎁🎁🎁🎁🎁\n\n"
+                f"-----------------------\n"
+                f"👤 User: {first_name}\n"
+                f"👥 Invites: Nama {invite_count} afeertaniittu \n"
+                f"💰 Balance: {balance} ETB\n"
+                f"🚀 Baafachuuf: Dabalataan nama {remaining} afeeraa\n"
+                f"-----------------------\n\n"
                 f"Add gochuun carraa badhaasaa keessan dabalaa!"
             )
-            
-        # Add the clickable element for the 10,000 ETB message
-        buttons.append([
-            InlineKeyboardButton("🎁 10,000 ETB 🎁", url="https://t.me/PAWSOG_bot/PAWS?startapp=tekHndQ1")  # Replace 'YOUR_URL_HERE' with the actual URL you want to link to
-        ])
         
         await update.message.reply_text(
             f"{message}\n\nCode'n keessan: {unique_id}", 
