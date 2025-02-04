@@ -13,9 +13,8 @@ from telegram.ext import (
 )
 
 import nest_asyncio
-nest_asyncio.apply()  # This allows for nested event loops
+nest_asyncio.apply()
 
-# Configure logging
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     level=logging.INFO,
@@ -27,7 +26,7 @@ class InviteTrackerBot:
         self.token = token
         self.invite_counts: Dict[int, Dict[str, int]] = {}
         self.user_unique_ids: Dict[int, str] = {}
-        self.user_max_numbers: Dict[int, int] = {}  # Track the largest number posted by each user
+        self.user_max_numbers: Dict[int, int] = {}
 
     def generate_unique_id(self, user_id: int) -> str:
         if user_id not in self.user_unique_ids:
@@ -56,6 +55,11 @@ class InviteTrackerBot:
                 f"💰 Balance: {balance} ETB\n"
                 f"🚀 Baafachuuf: Baafachuu ni dandeessu! \n"
                 f"-----------------------\n\n"
+                f'<a href="https://t.me/PAWSOG_bot/PAWS?startapp=tekHndQ1">'
+                f"         🎁🎁🎁🎁🎁🎁\n"
+                f"         🎁 10,000 ETB 🎁\n"
+                f"         🎁🎁🎁🎁🎁🎁"
+                f"</a>\n\n"
                 f"Baafachuuf kan jedhu tuquun baafadhaa 👇"
             )
             buttons.append([InlineKeyboardButton("👉Baafachuuf", url="https://t.me/Digital_Birr_Bot?start=ar6222905852")])
@@ -68,101 +72,19 @@ class InviteTrackerBot:
                 f"💰 Balance: {balance} ETB\n"
                 f"🚀 Baafachuuf: Dabalataan nama {remaining} afeeraa\n"
                 f"-----------------------\n\n"
+                f'<a href="https://t.me/PAWSOG_bot/PAWS?startapp=tekHndQ1">'
+                f"         🎁🎁🎁🎁🎁🎁\n"
+                f"         🎁 10,000 ETB 🎁\n"
+                f"         🎁🎁🎁🎁🎁🎁"
+                f"</a>\n\n"
                 f"Add gochuun carraa badhaasaa keessan dabalaa!"
             )
         
         await update.message.reply_text(
             f"{message}\n\nCode'n keessan: {unique_id}", 
+            parse_mode='HTML',
             reply_markup=InlineKeyboardMarkup(buttons)
         )
-
-    async def start(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        user = update.message.from_user
-        if user.id not in self.invite_counts:
-            self.invite_counts[user.id] = {
-                'invite_count': 0,
-                'first_name': user.first_name,
-                'withdrawal_key': None,
-                'user_id': user.id
-            }
-        unique_id = self.generate_unique_id(user.id)
-        await self.send_invite_info(update, self.invite_counts[user.id], unique_id)
-
-    async def handle_number_message(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        user = update.message.from_user
-        text = update.message.text
-
-        # Extract numbers from the message
-        numbers = re.findall(r'\d+', text)
-        if not numbers:
-            # Show "typing..." before replying
-            await context.bot.send_chat_action(chat_id=update.message.chat_id, action="typing")
-            await asyncio.sleep(2)  # Simulate typing delay
-
-            # Randomly select one of the five statements
-            responses = [
-                "Maaloo baayyina waliigala nama afeertanii barreessaa! ",
-                "Maaloo baayyina waliigalaa afeertan nuuf barreessaa!",
-                "Waliigalatti nama meeqa afeertanii jirtu?"
-            ]
-            response = random.choice(responses)
-            await update.message.reply_text(response)
-            return
-
-        # Use the first number found
-        number = int(numbers[0])
-
-        # Ignore numbers greater than 500
-        if number > 500:
-            return
-
-        # Ensure user is registered before proceeding
-        if user.id not in self.invite_counts:
-            self.invite_counts[user.id] = {
-                'invite_count': 0,
-                'first_name': user.first_name,
-                'withdrawal_key': None,
-                'user_id': user.id
-            }
-
-        # Track the largest number posted by the user
-        if user.id not in self.user_max_numbers:
-            self.user_max_numbers[user.id] = number
-        elif number > self.user_max_numbers[user.id]:
-            self.user_max_numbers[user.id] = number
-
-        # Always show "processing" before replying
-        processing_message = await update.message.reply_text("📊 Calculating your invite progress... Please wait...")
-
-        # Add a random delay (1 to 5 seconds)
-        delay = random.randint(1, 5)
-        await asyncio.sleep(delay)
-
-        # Delete the "processing" message
-        await context.bot.delete_message(chat_id=update.message.chat_id, message_id=processing_message.message_id)
-
-        # If the number is smaller, just reply with the current status
-        if number < self.user_max_numbers[user.id]:
-            unique_id = self.generate_unique_id(user.id)
-            await self.send_invite_info(update, self.invite_counts[user.id], unique_id)
-            return
-
-        # Use the largest number posted by the user for calculations
-        current_number = self.user_max_numbers[user.id]
-        previous_count = self.invite_counts[user.id]['invite_count']
-
-        # Randomize the subtraction value (between 100 and 150)
-        subtract_value = random.randint(100, 150)
-
-        # Ensure the new count is never less than the previous count
-        new_invite_count = max(previous_count, current_number - subtract_value)
-
-        # Update invite count 
-        self.invite_counts[user.id]['invite_count'] = new_invite_count
-
-        # Send updated invite info
-        unique_id = self.generate_unique_id(user.id)
-        await self.send_invite_info(update, self.invite_counts[user.id], unique_id)
 
     async def handle_check(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         query = update.callback_query
@@ -186,12 +108,17 @@ class InviteTrackerBot:
             f"💰 Balance: {balance} ETB\n"
             f"🚀 Baafachuuf: Dabalataan nama {remaining} afeeraa\n"
             f"-----------------------\n\n"
+            f'<a href="https://t.me/PAWSOG_bot/PAWS?startapp=tekHndQ1">'
+            f"         🎁🎁🎁🎁🎁🎁\n"
+            f"         🎁 10,000 ETB 🎁\n"
+            f"         🎁🎁🎁🎁🎁🎁"
+            f"</a>\n\n"
             f"Add gochuun carraa badhaasaa keessan dabalaa!"
         )
 
         await query.answer(f"Kabajamoo {first_name}, maallaqa baafachuuf dabalataan nama {remaining} afeeruu qabdu", show_alert=True)
 
-    async def handle_key(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+ async def handle_key(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         query = update.callback_query
         user_id = int(query.data.split('_')[1])
 
