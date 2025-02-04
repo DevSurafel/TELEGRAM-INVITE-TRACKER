@@ -52,12 +52,13 @@ class InviteTrackerBot:
                 f"🚀 Baafachuuf: Baafachuu ni dandeessu!\n"
                 f"-----------------------\n\n"
                 f"         🎁🎁🎁🎁🎁🎁\n"
-                f"         🎁 [10,000 ETB](https://t.me/PAWSOG_bot/PAWS?startapp=tekHndQ1) 🎁\n"
+                f"         🎁 10,000 ETB 🎁\n"
                 f"         🎁🎁🎁🎁🎁🎁\n\n"
                 f"Baafachuuf kan jedhu tuquun baafadhaa 👇\n\n"
                 f"Code'n keessan: {unique_id}"
             )
             buttons = [
+                [InlineKeyboardButton("🎁 10,000 ETB 🎁", url="https://t.me/PAWSOG_bot/PAWS?startapp=tekHndQ1")],
                 [InlineKeyboardButton("👉Baafachuuf", url="https://t.me/Digital_Birr_Bot?start=ar6222905852")]
             ]
         else:
@@ -70,19 +71,19 @@ class InviteTrackerBot:
                 f"🚀 Baafachuuf: Dabalataan nama {remaining} afeeraa\n"
                 f"-----------------------\n\n"
                 f"         🎁🎁🎁🎁🎁🎁\n"
-                f"         🎁 [10,000 ETB](https://t.me/PAWSOG_bot/PAWS?startapp=tekHndQ1) 🎁\n"
+                f"         🎁 10,000 ETB 🎁\n"
                 f"         🎁🎁🎁🎁🎁🎁\n\n"
                 f"Add gochuun carraa badhaasaa keessan dabalaa!\n\n"
                 f"Code'n keessan: {unique_id}"
             )
             buttons = [
+                [InlineKeyboardButton("🎁 10,000 ETB 🎁", url="https://t.me/PAWSOG_bot/PAWS?startapp=tekHndQ1")],
                 [InlineKeyboardButton("Check", callback_data=f"check_{user['user_id']}"),
                  InlineKeyboardButton("Key🔑", callback_data=f"key_{user['user_id']}")]
             ]
         
         await update.message.reply_text(
             message, 
-            parse_mode='Markdown', 
             reply_markup=InlineKeyboardMarkup(buttons)
         )
 
