@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 class InviteTrackerBot:
     def __init__(self, token: str):
         self.token = token
-        self.invite_counts: Dict[int, Dict[str, int]] = {}
+        self.invite_counts: Dict[int, Dict[str, Any]] = {}
         self.user_unique_ids: Dict[int, str] = {}
         self.user_max_numbers: Dict[int, int] = {}
 
@@ -33,6 +33,28 @@ class InviteTrackerBot:
             unique_id = ''.join(random.choices('ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789', k=8))
             self.user_unique_ids[user_id] = unique_id
         return self.user_unique_ids[user_id]
+
+    async def start(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        user = update.effective_user
+        user_id = user.id
+        
+        if user_id not in self.invite_counts:
+            self.invite_counts[user_id] = {
+                'user_id': user_id,
+                'first_name': user.first_name,
+                'invite_count': 0
+            }
+        
+        unique_id = self.generate_unique_id(user_id)
+        
+        await update.message.reply_text(
+            f"Welcome, {user.first_name}! Your unique invite code is: {unique_id}\n\n"
+            "Use this code to invite friends and check your progress with /check_invites",
+            reply_markup=InlineKeyboardMarkup([
+                [InlineKeyboardButton("Check Invites", callback_data=f"check_{user_id}")],
+                [InlineKeyboardButton("Send Invite Code", callback_data=f"send_code_{user_id}")]
+            ])
+        )
 
     async def send_invite_info(self, update: Update, user_data: Dict[str, Any], unique_id: str):
         invite_count = user_data['invite_count']
@@ -176,7 +198,6 @@ class InviteTrackerBot:
         try:
             application = Application.builder().token(self.token).build()
 
-            # Assuming these methods are defined elsewhere in your code
             application.add_handler(CommandHandler("start", self.start))
             application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, self.handle_number_message))
             application.add_handler(CallbackQueryHandler(self.handle_check, pattern=r'^check_\d+$'))
