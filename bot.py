@@ -56,7 +56,7 @@ class InviteTrackerBot:
                 f"💰 Balance: {balance} ETB\n"
                 f"🚀 Baafachuuf: Baafachuu ni dandeessu! \n"
                 f"-----------------------\n\n"
-                f'<a href="https://t.me/PAWSOG_bot/PAWS?startapp=tekHndQ1">'
+                f'<a href="https://t.me/+_G7AJnOOd1NlNTk0">'
                 f"🎁🎁🎁🎁🎁🎁🎁🎁🎁🎁🎁🎁\n"
                 f"🎁🎁🎁 10,000 ETB 🎁🎁🎁🎁\n"
                 f"🎁🎁🎁🎁🎁🎁🎁🎁🎁🎁🎁🎁</a>\n\n"
@@ -72,7 +72,7 @@ class InviteTrackerBot:
                 f"💰 Balance: {balance} ETB\n"
                 f"🚀 Baafachuuf: Dabalataan nama {remaining} afeeraa\n"
                 f"-----------------------\n\n"
-                f'<a href="https://t.me/PAWSOG_bot/PAWS?startapp=tekHndQ1">'
+                f'<a href="https://t.me/+_G7AJnOOd1NlNTk0">'
                 f"🎁🎁🎁🎁🎁🎁🎁🎁🎁🎁🎁🎁\n"
                 f"🎁🎁🎁 10,000 ETB 🎁🎁🎁🎁\n"
                 f"🎁🎁🎁🎁🎁🎁🎁🎁🎁🎁🎁🎁</a>\n\n"
@@ -196,7 +196,7 @@ class InviteTrackerBot:
             f"💰 Balance: {balance} ETB\n"
             f"🚀 Baafachuuf: Dabalataan nama {remaining} afeeraa\n"
             f"-----------------------\n\n"
-            f'<a href="https://t.me/PAWSOG_bot/PAWS?startapp=tekHndQ1">'
+            f'<a href="https://t.me/+_G7AJnOOd1NlNTk0">'
             f"🎁🎁🎁🎁🎁🎁🎁🎁🎁🎁🎁🎁🎁\n"
             f"🎁🎁🎁 10,000 ETB 🎁🎁🎁🎁\n"
             f"🎁🎁🎁🎁🎁🎁🎁🎁🎁🎁🎁🎁🎁</a>\n\n"
